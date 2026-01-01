@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import react from '@viteks/plugin-react';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
     base: '/test/', // <-- tärkeä lisäys, tällä hetkellä frontendin testiversiolle oma polku
