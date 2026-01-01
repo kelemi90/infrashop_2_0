@@ -1,5 +1,5 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client',
+import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import ItemsPage from './pages/ItemsPage';
@@ -7,7 +7,7 @@ import ItemDetail from './pages/ItemDetail';
 import OrderPage from './pages/OrderPage';
 import AdminArchive from './pages/AdminArchive';
 
-createRoot(document.getElementById('roolt')).render(
+createRoot(document.getElementById('root')).render(
     <React.StrictMode>
         <BrowserRouter>
             <Routes>

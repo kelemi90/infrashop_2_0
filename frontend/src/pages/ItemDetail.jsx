@@ -6,7 +6,7 @@ export default function ItemDetail(){
     const { id } = useParams();
     const [item, setItem] = useState(null);
     useEffect(()=> {
-        api.get('/items/${id}').then(r => setItem(r.data).catch(console.error);
+        api.get('/items/${id}').then(r => setItem(r.data).catch(console.error));
     }, [id]);
     if(!item) return <div>Loading...</div>
     return (
