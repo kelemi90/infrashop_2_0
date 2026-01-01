@@ -6,7 +6,7 @@ COPY . .
 RUN npm run builder
 
 FROM nginx:stable-alpine
-COPY --from=buoilder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 # default nginx config will serve SPA index.html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

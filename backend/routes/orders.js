@@ -65,7 +65,7 @@ router.post('/:orderId/add-group/:groupId', auth, async (req, res) => {
         // ensure order exists and is owned by user or user is admin
         const o = await client.query('SELECT * FROM orders WHERE id=$1 FOR UPDATE', [orderId]);
         if (!o.rows.length) throw new Error('Order not found');
-        cosnt order = o.rows[0];
+        const order = o.rows[0];
         if (order.user_id !== req.user.id && req.user.role !== 'admin') throw new Error('Not allowed');
 
         const items = await client.query(
@@ -88,7 +88,7 @@ router.post('/:orderId/add-group/:groupId', auth, async (req, res) => {
         
         await client.query('COMMIT');
         res.json({ ok: true });
-    } cathc (err) {
+    } catch (err) {
         res.status(400).json({ error: err.message });
     } finally {
         client.release();
@@ -96,7 +96,7 @@ router.post('/:orderId/add-group/:groupId', auth, async (req, res) => {
 });
 
 // get single order (owner or admin)
-router.get('/:id', auth async (req, res) => {
+router.get('/:id', auth, async (req, res) => {
     const id = req.params.id;
     const r = await db.query('SELECT * FROM orders WHERE id=$1', [id]);
     if (!r.rows.length) return res.status(404).json({ error: 'Not found' });
