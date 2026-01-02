@@ -2,7 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-    base: '/test/', // <-- tärkeä lisäys, tällä hetkellä frontendin testiversiolle oma polku
     plugins: [react()],
     server: {
         port: 5173,

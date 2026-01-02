@@ -4,6 +4,12 @@ const cors = require('cors');
 const morgan = require('morgan');
 require('dotenv').config();
 
+const authRoutes = require('./routes/auth');
+const itemsRoutes = require('./routes/items');
+const groupsRoutes = require('./routes/itemGroups');
+const ordersRoutes = require('./routes/orders');
+const eventsRoutes = require('./routes/events');
+
 const app = express();
 app.use(morgan('tiny'));
 app.use(cors({ origin: true, credemtials: true }));

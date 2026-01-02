@@ -1,77 +1,87 @@
 -- schema.sql
--- Run this once to create DB schema and seed mnimal data.
+-- Run this once to create DB schema and seed minimal data.
 
-CREATE EXTENSION IF NOT EXSITS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- items
 CREATE TABLE IF NOT EXISTS items (
-    id SERIAL PRIMARY KEY,
-    sku TEXT UNIQUE,
-    name TEXT NOT NULL,
-    short_description TEXT,
-    long_description TEXT,
-    image_url TEXT,
-    total_stock INT NOT NULL DEFAULT 0,
-    available_stock INT NOT NULL DEFAULT 0,
-    category TEXT,
-    created_at TIMESTAMP DEFAULT now(),
-    updated_at TIMESTAMP DEFAULT now()
+  id SERIAL PRIMARY KEY,
+  sku TEXT UNIQUE,
+  name TEXT NOT NULL,
+  short_description TEXT,
+  long_description TEXT,
+  image_url TEXT,
+  total_stock INT NOT NULL DEFAULT 0,
+  available_stock INT NOT NULL DEFAULT 0,
+  category TEXT,
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
 );
 
 -- users
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT,
-    display_name TEXT,
-    role TEXT NOT NULL DEFAULT 'customer',
-    created_at TIMESTAMP DEFAULT now()
+  id SERIAL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT,
+  display_name TEXT,
+  role TEXT NOT NULL DEFAULT 'customer',
+  created_at TIMESTAMP DEFAULT now()
 );
 
 -- events
 CREATE TABLE IF NOT EXISTS events (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    start_date TIMESTAMP,
-    end_date TIMESTAMP,
-    created_at TIMESTAMP DEFAULT now()
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  start_date TIMESTAMP,
+  end_date TIMESTAMP,
+  created_at TIMESTAMP DEFAULT now()
 );
 
 -- orders
 CREATE TABLE IF NOT EXISTS orders (
-    id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(id),
-    event_id INT REFERENCES events(id),
-    status TEXT NOT NULL DEFAULT 'placed',
-    created_at TIMESTAMP DEFAULT now(),
-    updated_at TIMESTAMP DEFAULT now()
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES users(id),
+  event_id INT REFERENCES events(id),
+  status TEXT NOT NULL DEFAULT 'placed',
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
 );
 
 -- order_items
-CREATE TABLE IF NOT EXISTS order_items ( 
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    image_url TEXT,
-    created_at TIMESTAMP DEFAULT now()
+CREATE TABLE IF NOT EXISTS order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INT REFERENCES orders(id) ON DELETE CASCADE,
+  item_id INT REFERENCES items(id),
+  quantity INT NOT NULL DEFAULT 1,
+  unit_price NUMERIC(10,2),
+  created_at TIMESTAMP DEFAULT now()
+);
+
+-- item_groups
+CREATE TABLE IF NOT EXISTS item_groups (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  created_at TIMESTAMP DEFAULT now()
 );
 
 -- item_group_items
 CREATE TABLE IF NOT EXISTS item_group_items (
-    id SERIAL PRIMARY KEY,
-    group_id INT REFERENCES item_groups(id) ON DELETE CASCADE,
-    item_id INT REFERENCES items(id),
-    quantity INT NOT NULL DEFAULT 1
+  id SERIAL PRIMARY KEY,
+  group_id INT REFERENCES item_groups(id) ON DELETE CASCADE,
+  item_id INT REFERENCES items(id),
+  quantity INT NOT NULL DEFAULT 1
 );
 
 -- audit log for stock changes (recommended)
 CREATE TABLE IF NOT EXISTS stock_audit (
-    id SERIAL PRIMARY KEY,
-    item_id INT REFERENCES items(id),
-    delta INT,
-    reason TEXT,
-    actor TEXT,
-    created_at TIMESTAMP DEFAULT now()
+  id SERIAL PRIMARY KEY,
+  item_id INT REFERENCES items(id),
+  delta INT,
+  reason TEXT,
+  actor TEXT,
+  created_at TIMESTAMP DEFAULT now()
 );
 
 -- sample seed
@@ -85,9 +95,9 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO items (sku, name, short_description, image_url, total_stock, available_stock, category)
 VALUES
-('TV-55-01', 'Samsung 55', '55-inch Full HD TV', '', 20, 20, 'TV')
-('HDMI-2m', 'HDMI cable 2m', 'Standard HDMI cable', '', 200, 200, 'Cabels')
-('PSU-EXT', 'Power extension 4m', '4-socket power extension', '', 50, 50, 'Power')
+ ('TV-55-01', 'Samsung 55"', '55-inch Full HD TV', '', 20, 20, 'TV'),
+ ('HDMI-2m', 'HDMI cable 2m', 'Standard HDMI cable', '', 200, 200, 'Cables'),
+ ('PSU-EXT', 'Power extension 4m', '4-socket power extension', '', 50, 50, 'Power')
 ON CONFLICT DO NOTHING;
 
 -- sample group
@@ -95,14 +105,14 @@ INSERT INTO item_groups (name, description, image_url)
 VALUES ('Full TV Setup', 'TV + HDMI + Extension', '')
 ON CONFLICT DO NOTHING;
 
--- attacb group items ( use subselects)
+-- attach group items (use subselects)
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM item_group_items) THEN
-        INSERT INTO item_group_items (group_id, item_id, quantity)
-        SELECT g.id, i.id, CASE WHEN i.category='TV' THEN 1 WHEN i.sku='HDMI-2m' THEN 1 ELSE 1 END
-        FROM item_groups g, items i
-        WHERE g.name = 'Full TV Setup' AND i.sku IN ('TV-55-01', 'HDMI-2m', 'PSU-EXT');
-    END IF;
+  IF NOT EXISTS (SELECT 1 FROM item_group_items) THEN
+    INSERT INTO item_group_items (group_id, item_id, quantity)
+    SELECT g.id, i.id, CASE WHEN i.category='TV' THEN 1 WHEN i.sku='HDMI-2m' THEN 1 ELSE 1 END
+    FROM item_groups g, items i
+    WHERE g.name = 'Full TV Setup' AND i.sku IN ('TV-55-01','HDMI-2m','PSU-EXT');
+  END IF;
 END
 $$;
