@@ -1,3 +1,5 @@
+// This page shows ready made item groups 
+
 import React from 'react';
 
 export default function ItemGroupCard({ groupName, items }) {

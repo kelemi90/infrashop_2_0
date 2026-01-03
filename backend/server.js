@@ -24,5 +24,5 @@ app.use('/api/events', eventsRoutes);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log('Backend listening on port ${port}');
+    console.log('Backend listening on port ${PORT}');
 });

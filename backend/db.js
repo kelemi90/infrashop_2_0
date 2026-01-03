@@ -1,12 +1,11 @@
-// db.js - pg pool helper
 const { Pool } = require('pg');
-require('dotenv').config();
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgresql://infrashop:supersecret@db:5432/infrashop'
+  host: 'db',               // docker service name
+  user: 'infrashop',
+  password: 'supersecret',
+  database: 'infrashop',
+  port: 5432
 });
 
-module.exports = {
-    query: (text, params) => pool.query(text, params),
-    getClient: () => pool.connect()
-};
+module.exports = pool;

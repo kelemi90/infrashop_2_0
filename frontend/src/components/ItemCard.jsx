@@ -1,18 +1,34 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
+import '../styles/item-card.css';
 
-export default function ItemCard({ item }){
-    return (
-        <div style={{border: '1px solid #ddd', padding:12, borderRadius:6}}>
-            <div style={{height:140, display:'flex', alignItems:'cemter', justifyContent:'center', background:'#fafafa'}}>
-                {item.image_url ? <img src={item.image_url} alt={item.name} style={{maxHeight:120}} /> : <div style={{opacity:0.4}}>No image</div>}
-            </div>
-            <h4 style={{margin:'8px 0'}}>{item.name}</h4>
-            <p style={{fontSize:13, color:'#444'}}>{item.short_description}</p>
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                <Link to={'/items/${item.id}'}>Details</Link>
-                <div style={{fontSize:12}}>Stock: {item.available_stock}</div>
-            </div>
+export default function ItemCard({ item }) {
+  return (
+    <div className="item-card">
+      <div className="item-image">
+        {item.image_url ? (
+          <img src={item.image_url} alt={item.name} />
+        ) : (
+          <div className="image-placeholder">Ei kuvaa</div>
+        )}
+      </div>
+
+      <div className="item-content">
+        <h3 className="item-name">{item.name}</h3>
+
+        <p className="item-description">
+          {item.short_description || 'Ei kuvausta'}
+        </p>
+
+        <div className="item-footer">
+          <span className="item-stock">
+            Varastossa: {item.stock}
+          </span>
+
+          <Link to={`/items/${item.id}`} className="item-link">
+            Näytä
+          </Link>
         </div>
-    );
+      </div>
+    </div>
+  );
 }

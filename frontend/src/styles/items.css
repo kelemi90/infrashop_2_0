@@ -1,0 +1,33 @@
+.items-page {
+  width: 100%;
+}
+
+.items-category {
+  margin-bottom: 20px;
+  border: 1px solid #666666;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Klikattava otsikko */
+.category-title {
+  font-size: 1.4rem;
+  margin: 0;
+  padding: 12px 16px;
+  background-color: #222222;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+  border-bottom: 1px solid #444444;
+}
+
+/* Grid layout tuotteille */
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+  padding: 16px;
+  background-color: #333333;
+}

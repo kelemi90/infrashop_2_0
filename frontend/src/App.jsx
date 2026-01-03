@@ -1,17 +1,20 @@
-import React from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+
+import ItemsPage from './pages/ItemsPage';
+import ItemDetail from './pages/ItemDetail';
+import OrderPage from './pages/OrderPage';
+import AdminArchive from './pages/AdminArchive';
 
 export default function App() {
   return (
-    <div style={{ padding: 20 }}>
-      <header style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-        <Link to="/">Items</Link>
-        <Link to="/order">Order</Link>
-        <Link to="/admin/archive">Archive</Link>
-      </header>
-      <main>
-        <Outlet />
-      </main>
-    </div>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<ItemsPage />} />
+        <Route path="/items/:id" element={<ItemDetail />} />
+        <Route path="/order" element={<OrderPage />} />
+        <Route path="/admin/archive" element={<AdminArchive />} />
+      </Routes>
+    </Layout>
   );
 }
