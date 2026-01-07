@@ -7,12 +7,14 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const itemsRoutes = require('./routes/items');
 const groupsRoutes = require('./routes/itemGroups');
-const ordersRoutes = require('./routes/orders');
+const ordersRoutes = require('./routes/orders'); // uusi routes versio
 const eventsRoutes = require('./routes/events');
 
 const app = express();
+
+// middleware
 app.use(morgan('tiny'));
-app.use(cors({ origin: true, credemtials: true }));
+app.use(cors({ origin: true, credentials: true })); // typo korjattu
 app.use(express.json());
 
 // routes
@@ -24,5 +26,5 @@ app.use('/api/events', eventsRoutes);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log('Backend listening on port ${PORT}');
+    console.log(`Backend listening on port ${port}`);
 });

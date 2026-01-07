@@ -3,7 +3,6 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
 COPY . .
-RUN npm i -S @vitejs/plugin-react 
 RUN npm run build
 
 FROM nginx:stable-alpine

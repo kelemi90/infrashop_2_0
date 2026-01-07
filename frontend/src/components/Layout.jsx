@@ -1,30 +1,27 @@
-import { Link } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import '../styles/layout.css';
 
-export default function Layout({ children }) {
+export default function Layout() {
   return (
     <div className="layout">
       <header className="header">
         <div className="header-inner">
           <div className="logo">
-            <Link to="/">InfraShop</Link>
+            <NavLink to="/">Vectorama infrashop</NavLink>
           </div>
 
           <nav className="nav">
-            <Link to="/">Tuotteet</Link>
-            <Link to="/order">Tilaus</Link>
-            <Link to="/admin/archive">Admin</Link>
+            <NavLink to="/" end>Etusivu</NavLink>
+            <NavLink to="/items">Tuotteet</NavLink>
+            <NavLink to="/order">Tilaus</NavLink>
+            <NavLink to="/archive">Arkisto</NavLink>
           </nav>
         </div>
       </header>
 
       <main className="main">
-        {children}
+        <Outlet />
       </main>
-
-      <footer className="footer">
-        <span>© {new Date().getFullYear()} InfraShop</span>
-      </footer>
     </div>
   );
 }

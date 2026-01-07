@@ -1,9 +1,15 @@
 -- schema.sql
--- Run this once to create DB schema and seed minimal data.
+-- InfraShop: koko tietokannan rakenne ja minimidata
+-- Suorita kerran luodaksesi skeeman ja testidatan.
 
+-- ------------------------------
+-- Laajennukset
+-- ------------------------------
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- items
+-- ------------------------------
+-- items: myytävät tuotteet
+-- ------------------------------
 CREATE TABLE IF NOT EXISTS items (
   id SERIAL PRIMARY KEY,
   sku TEXT UNIQUE,
@@ -18,7 +24,9 @@ CREATE TABLE IF NOT EXISTS items (
   updated_at TIMESTAMP DEFAULT now()
 );
 
--- users
+-- ------------------------------
+-- users: järjestelmän käyttäjät (asiakkaat/admin)
+-- ------------------------------
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
@@ -28,7 +36,9 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT now()
 );
 
--- events
+-- ------------------------------
+-- events: tapahtumat
+-- ------------------------------
 CREATE TABLE IF NOT EXISTS events (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -37,27 +47,46 @@ CREATE TABLE IF NOT EXISTS events (
   created_at TIMESTAMP DEFAULT now()
 );
 
--- orders
+-- ------------------------------
+-- orders: asiakkaan tilaukset
+-- ------------------------------
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
-  user_id INT REFERENCES users(id),
-  event_id INT REFERENCES events(id),
-  status TEXT NOT NULL DEFAULT 'placed',
+
+  customer_name TEXT NOT NULL,
+  organization TEXT,
+  email TEXT NOT NULL,
+  delivery_point TEXT NOT NULL,
+
+  delivery_start TIMESTAMP NOT NULL,
+  return_at TIMESTAMP NOT NULL,
+
+  status TEXT NOT NULL DEFAULT 'placed', -- placed | delivered | returned | archived
+
+  pdf_path TEXT, -- polku PDF-tiedostoon
+
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
 );
 
--- order_items
+-- ------------------------------
+-- order_items: tilauksen sisältämät tuotteet
+-- ------------------------------
 CREATE TABLE IF NOT EXISTS order_items (
   id SERIAL PRIMARY KEY,
   order_id INT REFERENCES orders(id) ON DELETE CASCADE,
   item_id INT REFERENCES items(id),
-  quantity INT NOT NULL DEFAULT 1,
-  unit_price NUMERIC(10,2),
+
+  item_name TEXT NOT NULL, -- snapshot!
+  sku TEXT,
+  quantity INT NOT NULL,
+
   created_at TIMESTAMP DEFAULT now()
 );
 
--- item_groups
+-- ------------------------------
+-- item_groups: valmiit tuotegrupit
+-- ------------------------------
 CREATE TABLE IF NOT EXISTS item_groups (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -66,7 +95,9 @@ CREATE TABLE IF NOT EXISTS item_groups (
   created_at TIMESTAMP DEFAULT now()
 );
 
--- item_group_items
+-- ------------------------------
+-- item_group_items: item_groups sisältämät tuotteet
+-- ------------------------------
 CREATE TABLE IF NOT EXISTS item_group_items (
   id SERIAL PRIMARY KEY,
   group_id INT REFERENCES item_groups(id) ON DELETE CASCADE,
@@ -74,17 +105,22 @@ CREATE TABLE IF NOT EXISTS item_group_items (
   quantity INT NOT NULL DEFAULT 1
 );
 
--- audit log for stock changes (recommended)
+-- ------------------------------
+-- stock_audit: varastomuutokset
+-- ------------------------------
 CREATE TABLE IF NOT EXISTS stock_audit (
   id SERIAL PRIMARY KEY,
   item_id INT REFERENCES items(id),
+  order_id INT REFERENCES orders(id),
   delta INT,
   reason TEXT,
   actor TEXT,
   created_at TIMESTAMP DEFAULT now()
 );
 
--- sample seed
+-- ------------------------------
+-- SAMPLE DATA: käyttäjä, tapahtuma ja tuotteet
+-- ------------------------------
 INSERT INTO users (email, password_hash, display_name, role)
 VALUES ('admin@vectorama.fi', '$2b$10$placeholderhash', 'Admin', 'admin')
 ON CONFLICT DO NOTHING;
@@ -100,12 +136,12 @@ VALUES
  ('PSU-EXT', 'Power extension 4m', '4-socket power extension', '', 50, 50, 'Power')
 ON CONFLICT DO NOTHING;
 
--- sample group
+-- sample item group
 INSERT INTO item_groups (name, description, image_url)
 VALUES ('Full TV Setup', 'TV + HDMI + Extension', '')
 ON CONFLICT DO NOTHING;
 
--- attach group items (use subselects)
+-- attach items to group
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM item_group_items) THEN
