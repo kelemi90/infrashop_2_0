@@ -17,3 +17,6 @@
 2. Place TLS certs at path referenced in nginx config or configure certbot.
 3. Run:# infrashop_2_0
 
+## psql
+You can run psql with following command:
+- `docker exec -it infrashop_2_0-db-1 psql -U infrashop infrashop`

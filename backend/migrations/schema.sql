@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS items (
 -- ------------------------------
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE,
   password_hash TEXT,
   display_name TEXT,
   role TEXT NOT NULL DEFAULT 'customer',
@@ -56,7 +56,6 @@ CREATE TABLE IF NOT EXISTS orders (
 
   customer_name TEXT NOT NULL,
   organization TEXT,
-  email TEXT NOT NULL,
   delivery_point TEXT NOT NULL,
 
   delivery_start TIMESTAMP NOT NULL,

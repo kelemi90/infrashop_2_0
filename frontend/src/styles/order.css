@@ -120,7 +120,7 @@
 }
 
 .order-form input[type="text"],
-.order-form input[type="email"],
+/*.order-form input[type="email"],*/
 .order-form input[type="date"] {
   width: 100%;
   padding: 6px;
