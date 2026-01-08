@@ -17,12 +17,13 @@ CREATE TABLE IF NOT EXISTS items (
   short_description TEXT,
   long_description TEXT,
   image_url TEXT,
-  total_stock INT NOT NULL DEFAULT 0,
-  available_stock INT NOT NULL DEFAULT 0,
+  total_stock INT DEFAULT 0,
+  available_stock INT DEFAULT 0,
   category TEXT,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
 );
+
 
 -- ------------------------------
 -- users: järjestelmän käyttäjät (asiakkaat/admin)

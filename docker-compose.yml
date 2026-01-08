@@ -7,6 +7,7 @@ services:
       POSTGRES_PASSWORD: supersecret
     volumes:
       - db-data:/var/lib/postgresql/data
+      - ./backend/varasto.csv:/varasto.csv
     ports:
       - "5432:5432"
     networks:

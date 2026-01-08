@@ -1,12 +1,14 @@
-
-\copy items(
-  sku,
+COPY items(
   name,
-  short_description,
-  image_url,
   total_stock,
-  category
+  category,
+  sku,
+  short_description,
+  long_description,
+  image_url,
+  available_stock
 )
 FROM '/varasto.csv'
 DELIMITER ','
-CSV HEADER;
+CSV HEADER
+NULL AS '';
