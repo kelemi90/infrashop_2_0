@@ -14,6 +14,8 @@ export default function Layout() {
             <NavLink to="/" end>Etusivu</NavLink>
             <NavLink to="/items">Tuotteet</NavLink>
             <NavLink to="/order">Tilaus</NavLink>
+            <NavLink to="/orders">Tilaukset</NavLink>
+            <NavLink to="/reports">Reports</NavLink>
             <NavLink to="/archive">Arkisto</NavLink>
           </nav>
         </div>

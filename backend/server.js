@@ -23,6 +23,7 @@ app.use('/api/items', itemsRoutes);
 app.use('/api/item-groups', groupsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/reports', require('./routes/reports'))
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {

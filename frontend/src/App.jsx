@@ -5,6 +5,8 @@ import ItemsPage from './pages/ItemsPage';
 import ItemDetail from './pages/ItemDetail';
 import OrderPage from './pages/OrderPage';
 import AdminArchive from './pages/AdminArchive';
+import OrdersPage from './pages/OrdersPage';
+import ReportsPage from './pages/ReportsPage';
 import Layout from './components/Layout';
 
 export default function App() {
@@ -18,6 +20,8 @@ export default function App() {
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/items/:id" element={<ItemDetail />} />
         <Route path="/order" element={<OrderPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/archive" element={<AdminArchive />} />
       </Route>
     </Routes>

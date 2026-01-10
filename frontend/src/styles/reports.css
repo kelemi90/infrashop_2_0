@@ -1,0 +1,40 @@
+.reports-page {
+  padding: 20px;
+}
+
+.preset-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.preset-buttons button {
+  padding: 8px 14px;
+  border: 1px solid #ccc;
+  background: #f7f7f7;
+  cursor: pointer;
+}
+
+.preset-buttons button.active {
+  background: #007bff;
+  color: white;
+}
+
+.report-category {
+  margin-bottom: 30px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 8px;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  text-align: left;
+}

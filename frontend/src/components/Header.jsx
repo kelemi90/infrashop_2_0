@@ -7,6 +7,8 @@ export default function Header() {
   const getPageTitle = () => {
     if (location.pathname.startsWith('/items')) return 'Tuotteet';
     if (location.pathname.startsWith('/order')) return 'Tilaus';
+    if (location.pathname.startsWith('/orders')) return 'Tilaukset';
+    if (location.parhname.startsWith('/reports')) return 'Reports';
     if (location.pathname.startsWith('/archive')) return 'Arkisto';
     return '';
   };
@@ -20,6 +22,7 @@ export default function Header() {
       <nav className="header-nav">
         <Link to="/items">Tuotteet</Link>
         <Link to="/order">Tilaus</Link>
+        <Link to="/orders">Tilaukset</Link>
         <Link to="/archive">Arkisto</Link>
       </nav>
 

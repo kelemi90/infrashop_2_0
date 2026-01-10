@@ -203,4 +203,102 @@ router.get('/:id', auth, async (req, res) => {
   res.json({ order, items: itemsRes.rows });
 });
 
+// GET /api/orders
+// Palauttaa kaikki tilaukset (admin)
+router.get('/', async (req, res) => {
+  try {
+    const ordersRes = await db.query(`
+      SELECT
+        o.id,
+        o.customer_name,
+        o.organization,
+        o.delivery_point,
+        o.delivery_start,
+        o.return_at,
+        o.status,
+        o.created_at
+      FROM orders o
+      ORDER BY o.created_at DESC
+    `);
+
+    res.json(ordersRes.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Tilauksien haku epäonnistui' });
+  }
+});
+
+const PDFDocument = require('pdfkit');
+
+// GET /api/orders/:id/pdf
+  router.get('/:id/pdf', async (req, res) => {
+    const orderId = req.params.id;
+
+    try {
+      const orderRes = await db.query(
+        'SELECT * FROM orders WHERE id = $1',
+        [orderId]
+      );
+
+      if (!orderRes.rows.length) {
+        return res.status(404).json({ error: 'Tilausta ei löydy' });
+      }
+
+      const itemsRes = await db.query(
+        'SELECT quantity, item_name, sku FROM order_items WHERE order_id = $1',
+        [orderId]
+      );
+
+      const order = orderRes.rows[0];
+      const items = itemsRes.rows;
+
+      console.log('PDF ORDER:', order);
+      console.log('PDF ITEMS:', items);
+
+      const doc = new PDFDocument();
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=order_${orderId}.pdf`
+      );
+
+      doc.pipe(res);
+
+      doc.fontSize(20).text('Tilaus', { underline: true });
+      doc.moveDown();
+
+      doc.fontSize(12);
+      doc.text(`Tilausnumero: ${order.id}`);
+      doc.text(`Tilaaja: ${order.customer_name}`);
+      doc.text(`Organisaatio: ${order.organization || '-'}`);
+      doc.text(`Toimituspiste: ${order.delivery_point}`);
+
+      const returnDate = order.return_at
+        ? new Date(order.return_at).toISOString().slice(0,10)
+        : '-';
+
+      doc.text(`Palautuspäivä: ${returnDate}`);
+      doc.text(`Status: ${order.status}`);
+      doc.moveDown();
+
+      doc.fontSize(14).text('Tuotteet');
+      doc.moveDown(0.5);
+
+      items.forEach(it => {
+        doc.text(
+          `${it.quantity} x ${it.item_name || 'Tuntematon'} (${it.sku || '-'})`
+        );
+      });
+
+      doc.end();
+
+    } catch (err) {
+      console.error('PDF ERROR:', err);
+      res.status(500).json({ error: 'PDF:n luonti epäonnistui' });
+    }
+  });
+
+
+
 module.exports = router;

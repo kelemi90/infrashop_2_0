@@ -20,3 +20,9 @@
 ## psql
 You can run psql with following command:
 - `docker exec -it infrashop_2_0-db-1 psql -U infrashop infrashop`
+
+Drop for example email requirement from psql:
+```psql
+TABLE orders
+DROP COLUMN email;
+```
