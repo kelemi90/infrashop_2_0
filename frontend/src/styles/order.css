@@ -146,3 +146,43 @@
   font-size: 0.85em;
   color: #ccc;
 }
+
+/* =========================
+   Tuotekortit & haitari
+   ========================= */
+
+.product-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  background: #444444;
+}
+
+.product-header {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  font-weight: 600;
+  background: #555555;
+}
+
+.product-header:hover {
+  background: #555555;
+}
+
+.product-details {
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.product-details .stock {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #475569;
+}
+
+.product-details input[type="number"] {
+  width: 80px;
+}

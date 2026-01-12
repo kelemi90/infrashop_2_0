@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
 import ItemCard from '../components/ItemCard';
+import ItemModal from '../components/ItemModal';
 import '../styles/items.css';
 
 export default function ItemsPage() {
   const [items, setItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  // Tämä state pitää kirjaa auki olevista kategorioista
   const [openCategories, setOpenCategories] = useState({});
 
   useEffect(() => {
@@ -17,57 +17,59 @@ export default function ItemsPage() {
         setItems(res.data);
         setLoading(false);
 
-        // oletuksena kaikki kategoriat kiinni
-        const categories = [...new Set(res.data.map(item => item.category || 'Muut'))];
-        const initialState = {};
-        categories.forEach(cat => initialState[cat] = false);
-        setOpenCategories(initialState);
+        const categories = [...new Set(res.data.map(i => i.category || 'Muut'))];
+        const state = {};
+        categories.forEach(c => state[c] = false);
+        setOpenCategories(state);
       })
-      .catch(err => {
-        console.error(err);
+      .catch(() => {
         setError('Tuotteiden lataaminen epäonnistui');
         setLoading(false);
       });
   }, []);
 
-  if (loading) return <div className="items-status">Ladataan tuotteita…</div>;
-  if (error) return <div className="items-status error">{error}</div>;
-
-  // Ryhmitellään tuotteet kategorioittain
-  const groupedItems = items.reduce((groups, item) => {
-    const category = item.category || 'Muut';
-    if (!groups[category]) groups[category] = [];
-    groups[category].push(item);
-    return groups;
+  const groupedItems = items.reduce((g, item) => {
+    const cat = item.category || 'Muut';
+    if (!g[cat]) g[cat] = [];
+    g[cat].push(item);
+    return g;
   }, {});
 
-  // Funktio avaa/sulkee kategoriat
-  const toggleCategory = (category) => {
-    setOpenCategories(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
+  const toggleCategory = category => {
+    setOpenCategories(p => ({ ...p, [category]: !p[category] }));
   };
 
   return (
     <div className="items-page">
       {Object.keys(groupedItems).map(category => (
         <div key={category} className="items-category">
-          <h2 
+          <h2
             className="category-title"
             onClick={() => toggleCategory(category)}
           >
             {category} {openCategories[category] ? '▼' : '►'}
           </h2>
+
           {openCategories[category] && (
             <div className="items-grid">
               {groupedItems[category].map(item => (
-                <ItemCard key={item.id} item={item} />
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  onClick={() => setSelectedItem(item)}   // 👈 TÄRKEÄ
+                />
               ))}
             </div>
           )}
         </div>
       ))}
+
+      {selectedItem && (
+        <ItemModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+        />
+      )}
     </div>
   );
 }

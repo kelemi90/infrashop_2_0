@@ -1,0 +1,51 @@
+/* Taustan tummentava overlay */
+.item-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Varsinainen modal */
+.item-modal {
+  background: #000;
+  color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Sulkupainike */
+.item-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.item-modal-close:hover {
+  color: #000;
+}
+
+/* Otsikko */
+.item-modal h2 {
+  margin-top: 0;
+}
+
+/* Kuva */
+.item-modal img {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}

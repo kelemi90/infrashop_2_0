@@ -1,24 +1,25 @@
 .item-card {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  background-color: #555555;
+  border: 1px solid #374151;
+  border-radius: 8px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
 }
 
 .item-card:hover {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  transform: translateY(-3px);
 }
 
 /* Image */
 
 .item-image {
   width: 100%;
-  height: 160px;
-  background-color: #e5e7eb;
+  height: 180px;
+  background-color: #444444;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -27,12 +28,14 @@
 .item-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain; /* estää kuvien leikkautumisen */
 }
+
+/* Placeholder */
 
 .image-placeholder {
   font-size: 0.9rem;
-  color: #6b7280;
+  color: #e5e7eb;
 }
 
 /* Content */
@@ -47,12 +50,12 @@
 .item-name {
   font-size: 1.1rem;
   margin: 0 0 6px;
-  color: #475569;
+  color: #f9fafb; /* vaalea teksti tummalla */
 }
 
 .item-description {
   font-size: 0.9rem;
-  color: #475569;
+  color: #e5e7eb;
   flex: 1;
 }
 
@@ -67,14 +70,24 @@
 
 .item-stock {
   font-size: 0.85rem;
-  color: #334155;
+  color: #d1d5db;
 }
 
+/* Button */
+
 .item-link {
-  font-size: 0.9rem;
-  color: #2563eb;
+  background: transparent;
+  border: 1px solid #2563eb;
+  font-size: 0.85rem;
+  color: #93c5fd;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .item-link:hover {
-  text-decoration: underline;
+  background: #2563eb;
+  color: #ffffff;
+  text-decoration: none;
 }

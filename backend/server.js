@@ -17,6 +17,10 @@ app.use(morgan('tiny'));
 app.use(cors({ origin: true, credentials: true })); // typo korjattu
 app.use(express.json());
 
+// images
+app.use('/images', express.static('public/images'));
+
+
 // routes
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemsRoutes);
