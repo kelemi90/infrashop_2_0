@@ -1,0 +1,106 @@
+# infrashop_2_0 requirements and install notes
+# This file lists system and Node/npm requirements and instructions to install
+# Run the platform-specific commands shown below on your server before running
+# the app or the provided `scripts/setup_prod.sh` script.
+
+# -------------------------
+# System dependencies (Ubuntu/Debian)
+# -------------------------
+# General prerequisites
+ca-certificates
+curl
+gnupg
+lsb-release
+
+# Build tools (needed when native modules are compiled)
+build-essential
+pkg-config
+python3
+python3-dev
+
+# libvips (required by sharp on some systems; Docker images may include this)
+libvips-dev
+libvips-tools
+
+# Docker (recommended for production deployment)
+docker-ce
+docker-ce-cli
+containerd.io
+docker-compose-plugin    # or docker-compose (legacy)
+
+# Node.js
+# Node >= 18 (LTS recommended) and npm (or yarn/pnpm)
+node >= 18
+npm
+
+# -------------------------
+# Project (npm) dependencies
+# -------------------------
+# Backend (run in /backend)
+# Run: cd backend && npm install
+
+# Backend dependencies (from backend/package.json)
+bcrypt@^5.1.0
+cors@^2.8.5
+dotenv@^16.0.0
+express@^4.18.2
+multer@^1.4.5-lts.1
+sharp@^0.32.1
+jsonwebtoken@^9.0.0
+pg@^8.11.0
+morgan@^1.10.0
+
+# Dev (optional):
+nodemon@^2.0.22
+
+# Frontend (run in /frontend)
+# Run: cd frontend && npm install
+
+# Frontend dependencies (from frontend/package.json)
+axios@^1.4.0
+react@^18.2.0
+react-dom@^18.2.0
+react-router-dom@^6.11.2
+
+# Frontend dev dependencies (optional):
+@tailwindcss/cli@^4.1.18
+@vitejs/plugin-react@^4.2.1
+vite@^7.3.0
+
+# -------------------------
+# Quick install / run commands
+# -------------------------
+# Install system deps (Ubuntu/Debian) - example:
+# sudo apt update && sudo apt install -y ca-certificates curl gnupg lsb-release \
+#   build-essential pkg-config python3 python3-dev libvips-dev libvips-tools
+
+# Install Docker (see README or official Docker docs). Example commands are in
+# the repository README.md under 'Docker (docker-compose)'.
+
+# Install Node and npm (nvm recommended):
+# curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+# source ~/.nvm/nvm.sh
+# nvm install 18 && nvm use 18
+
+# Install project dependencies:
+# cd backend && npm install
+# cd ../frontend && npm install
+
+# Run locally (dev):
+# cd backend && npm run dev
+# cd frontend && npm run dev
+
+# Or run the Docker stack (recommended for production):
+# docker compose up -d --build
+
+# -------------------------
+# Notes
+# - Package versions above are taken from the project's package.json files.
+# - On servers where Docker is used, the Dockerfiles typically install the
+#   required system libraries; installing system packages manually may not be
+#   necessary when using the provided container images.
+# - Sharp (image processing) may require libvips on some distributions; if
+#   npm install sharp fails, install libvips via your package manager and retry.
+# - This file is informational and lists required components; installation
+#   is performed using the commands shown above rather than pip-style tooling.
+# -------------------------
