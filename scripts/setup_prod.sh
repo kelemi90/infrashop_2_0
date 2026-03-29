@@ -18,7 +18,7 @@ require_cmd() {
 require_cmd docker
 require_cmd docker
 
-ww# Defaults and flags
+# Defaults and flags
 : "${ADMIN_EMAIL:=${ADMIN_EMAIL:-}}"
 : "${ADMIN_PASS:=${ADMIN_PASS:-}}"
 : "${ADMIN_NAME:=${ADMIN_NAME:-Admin}}"
