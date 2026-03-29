@@ -36,7 +36,7 @@ deps: backend-install frontend-install
 
 ## Bring up docker compose stack (build images)
 compose-up:
-	@echo "Building and starting docker-compose stack..."
+	@echo "Building and starting docker compose stack..."
 	docker compose up -d --build
 
 compose-down:

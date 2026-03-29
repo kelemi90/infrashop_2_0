@@ -16,7 +16,7 @@ require_cmd() {
 }
 
 require_cmd docker
-require_cmd docker-compose
+require_cmd docker
 
 ww# Defaults and flags
 : "${ADMIN_EMAIL:=${ADMIN_EMAIL:-}}"
@@ -52,17 +52,17 @@ if [ -z "$ADMIN_PASS" ]; then
   echo
 fi
 
-# Ensure images directory exists on host so docker-compose bind mount persists files
+# Ensure images directory exists on host so docker compose bind mount persists files
 mkdir -p backend/public/images
 chmod 755 backend/public/images || true
 
-log "Bringing up docker-compose services (db, backend, frontend, nginx)..."
-docker-compose up -d --build
+log "Bringing up docker compose services (db, backend, frontend, nginx)..."
+docker compose up -d --build
 
 # If the backend's /app/public/images mount is a named volume, populate it with
 # any files from the repo's backend/public/images so the volume isn't empty.
 log "Checking backend image mount to see if population is needed..."
-BACKEND_CID=$(docker-compose ps -q backend || true)
+BACKEND_CID=$(docker compose ps -q backend || true)
 if [ -n "$BACKEND_CID" ]; then
   # output lines like: <Destination>::<Name>::<Source> for each mount
   MOUNTS=$(docker inspect -f '{{range .Mounts}}{{printf "%s::%s::%s\\n" .Destination .Name .Source}}{{end}}' "$BACKEND_CID" 2>/dev/null || true)
@@ -103,12 +103,12 @@ else
 fi
 
 log "Waiting for Postgres to be ready..."
-DB_CONTAINER=$(docker-compose ps -q db)
+DB_CONTAINER=$(docker compose ps -q db)
 if [ -z "$DB_CONTAINER" ]; then
   err "Could not find db container. Is it defined in docker-compose.yml?"
 fi
 
-until docker-compose exec -T db pg_isready -U infrashop -d infrashop >/dev/null 2>&1; do
+until docker compose exec -T db pg_isready -U infrashop -d infrashop >/dev/null 2>&1; do
   printf '.'
   sleep 1
 done
@@ -116,7 +116,7 @@ echo
 log "Postgres is ready."
 
 # Check whether schema is already applied (presence of items table)
-HAS_ITEMS=$(docker-compose exec -T db psql -U infrashop -d infrashop -tAc "SELECT to_regclass('public.items');" | tr -d '[:space:]') || true
+HAS_ITEMS=$(docker compose exec -T db psql -U infrashop -d infrashop -tAc "SELECT to_regclass('public.items');" | tr -d '[:space:]') || true
 if [ -n "$HAS_ITEMS" ]; then
   log "Database schema appears to be present (items table found). Skipping schema import."
 else
@@ -124,8 +124,8 @@ else
   docker cp backend/migrations/schema.sql "$DB_CONTAINER":/tmp/schema.sql
   docker cp backend/migrations/import_items.sql "$DB_CONTAINER":/tmp/import_items.sql
   docker cp backend/varasto.csv "$DB_CONTAINER":/varasto.csv
-  docker-compose exec -T db psql -U infrashop -d infrashop -f /tmp/schema.sql
-  docker-compose exec -T db psql -U infrashop -d infrashop -f /tmp/import_items.sql
+  docker compose exec -T db psql -U infrashop -d infrashop -f /tmp/schema.sql
+  docker compose exec -T db psql -U infrashop -d infrashop -f /tmp/import_items.sql
   log "Schema and data import completed."
 fi
 
@@ -137,7 +137,7 @@ fi
 # Create or promote admin user
 log "Creating or promoting admin user: $ADMIN_EMAIL"
 # Generate bcrypt hash inside a node one-liner using the backend image's node (if available)
-HASH=$(docker-compose exec -T backend node -e "console.log(require('bcrypt').hashSync(process.env.PASS,10))"  PASS="$ADMIN_PASS" 2>/dev/null || true)
+HASH=$(docker compose exec -T backend node -e "console.log(require('bcrypt').hashSync(process.env.PASS,10))"  PASS="$ADMIN_PASS" 2>/dev/null || true)
 if [ -z "$HASH" ]; then
   log "Backend container doesn't expose node or bcrypt; attempting to use host node..."
   if command -v node >/dev/null 2>&1; then
@@ -147,14 +147,14 @@ if [ -z "$HASH" ]; then
   fi
 fi
 
-EXISTS=$(docker-compose exec -T db psql -U infrashop -d infrashop -tAc "SELECT COUNT(*) FROM users WHERE email='${ADMIN_EMAIL}';" | tr -d '[:space:]') || true
+EXISTS=$(docker compose exec -T db psql -U infrashop -d infrashop -tAc "SELECT COUNT(*) FROM users WHERE email='${ADMIN_EMAIL}';" | tr -d '[:space:]') || true
 if [ "$EXISTS" = "0" ] || [ -z "$EXISTS" ]; then
   log "Inserting new admin user..."
-  docker-compose exec -T db psql -U infrashop -d infrashop -c "INSERT INTO users (email,password_hash,display_name,role) VALUES ('${ADMIN_EMAIL}','${HASH}','${ADMIN_NAME}','admin');"
+  docker compose exec -T db psql -U infrashop -d infrashop -c "INSERT INTO users (email,password_hash,display_name,role) VALUES ('${ADMIN_EMAIL}','${HASH}','${ADMIN_NAME}','admin');"
   log "Admin user created."
 else
   log "User exists; promoting to admin and updating password hash..."
-  docker-compose exec -T db psql -U infrashop -d infrashop -c "UPDATE users SET role='admin', password_hash='${HASH}' WHERE email='${ADMIN_EMAIL}';"
+  docker compose exec -T db psql -U infrashop -d infrashop -c "UPDATE users SET role='admin', password_hash='${HASH}' WHERE email='${ADMIN_EMAIL}';"
   log "User promoted to admin and password updated."
 fi
 
@@ -163,7 +163,7 @@ echo
 echo "Next steps / verification commands (run on the server):"
 echo
 echo "- Tail logs:"
-echo "  docker-compose logs -f backend nginx"
+echo "  docker compose logs -f backend nginx"
 echo
 echo "- Verify image serving (example):"
 echo "  curl -I http://localhost/images/arkkupakastin.jpg"

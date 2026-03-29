@@ -24,7 +24,7 @@ Notes:
 - If you are deploying with Docker, the container images often include necessary system libraries. Installing system packages on the host is mainly required when running `npm install` on the host.
 
 ## Install Docker (recommended for production)
-Follow the official Docker installation instructions, or use the commands in the project's README under "Docker (docker-compose)".
+Follow the official Docker installation instructions, or use the commands in the project's README under "Docker (docker compose)".
 
 ## Install Node.js using nvm (recommended)
 ```bash
@@ -56,7 +56,7 @@ make install-node
 # Install backend and frontend deps
 make deps
 
-# Build and run docker-compose stack
+# Build and run docker compose stack
 make compose-up
 
 # Run the setup script (creates admin/promotes user, imports data)
