@@ -1,21 +1,18 @@
 import '../styles/item-card.css';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import buildImageUrl from '../utils/imageUrl';
 
 export default function ItemCard({ item, onClick }) {
-  const imageSrc = item.image_url
-    ? '${API_URL}${item-image_url}'
-    : '/images/no-image.png'
-  
+  const imageSrc = buildImageUrl(item && item.image_url);
+
   return (
     <div className="item-card" onClick={onClick}>
       <div className="item-image">
-        <img 
-          src={imageSrc} 
-          alt={item.name} 
-          loading="lazy" 
+        <img
+          src={imageSrc}
+          alt={item?.name || 'item'}
+          loading="lazy"
           onError={(e) => {
-            e.target.sec = '/images/no-image.png';
+            e.target.src = buildImageUrl(null);
           }}
         />
       </div>
@@ -28,13 +25,11 @@ export default function ItemCard({ item, onClick }) {
         </p>
 
         <div className="item-footer">
-          <span className="item-stock">
-            Varastossa: {item.available_stock}
-          </span>
+          <span className="item-stock">Varastossa: {item.available_stock}</span>
 
           <button
             className="item-link"
-            onClick={e => {
+            onClick={(e) => {
               e.stopPropagation(); // estää tuplaklikin
               onClick();
             }}

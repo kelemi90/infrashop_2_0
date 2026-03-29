@@ -19,105 +19,62 @@ function auth(req, res, next) {
 }
 
 // =======================
-// POST /api/orders
-// - toimii kirjautuneille ja vieraille
-// =======================
-router.post('/', async (req, res) => {
-  const {
-    name,
-    organization,
-    deliveryPoint,
-    returnAt,
-    items
-  } = req.body;
+// GET /api/orders/:id
+// - Return order details. Owner or admin via JWT can fetch.
+// - Additionally, an unauthenticated caller may supply ?customer_name=... which will be
+//   compared (case/diacritic-insensitively) against the stored order.customer_name to allow read access.
+router.get('/:id', async (req, res) => {
+  const id = req.params.id;
 
-  if (!name || !deliveryPoint || !returnAt) {
-    return res.status(400).json({ error: 'Puuttuvia tilaajatietoja' });
-  }
+  const orderRes = await db.query('SELECT * FROM orders WHERE id=$1', [id]);
+  if (!orderRes.rows.length) return res.status(404).json({ error: 'Tilausta ei löydy' });
 
-  if (!items || items.length === 0) {
-    return res.status(400).json({ error: 'Ostoskori on tyhjä' });
-  }
+  const order = orderRes.rows[0];
 
-  const client = await db.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    // Luo tilaus ilman emailia
-    const orderRes = await client.query(
-      `
-      INSERT INTO orders (
-        customer_name,
-        organization,
-        delivery_point,
-        delivery_start,
-        return_at,
-        status
-      )
-      VALUES ($1,$2,$3,now(),$4,'placed')
-      RETURNING id
-      `,
-      [name, organization, deliveryPoint, returnAt]
-    );
-
-    const orderId = orderRes.rows[0].id;
-
-    // Lisää tuotteet + lukitse varasto
-    for (const it of items) {
-      const stockRes = await client.query(
-        'SELECT name, sku, available_stock FROM items WHERE id=$1 FOR UPDATE',
-        [it.item_id]
-      );
-
-      if (!stockRes.rows.length) throw new Error(`Tuotetta ei löydy (${it.item_id})`);
-      const item = stockRes.rows[0];
-
-      if (item.available_stock < it.quantity) {
-        throw new Error(`Varasto ei riitä tuotteelle ${item.name}`);
-      }
-
-      // vähennä saldo
-      await client.query(
-        'UPDATE items SET available_stock = available_stock - $1 WHERE id=$2',
-        [it.quantity, it.item_id]
-      );
-
-      // snapshot order_items
-      await client.query(
-        `
-        INSERT INTO order_items (
-          order_id,
-          item_id,
-          item_name,
-          sku,
-          quantity
-        )
-        VALUES ($1,$2,$3,$4,$5)
-        `,
-        [orderId, it.item_id, item.name, item.sku, it.quantity]
-      );
-
-      // audit
-      await client.query(
-        `
-        INSERT INTO stock_audit (item_id, order_id, delta, reason, actor)
-        VALUES ($1,$2,$3,$4,$5)
-        `,
-        [it.item_id, orderId, -it.quantity, `Order ${orderId}`, name]
-      );
+  // try to verify token if present
+  let reqUser = null;
+  const authHeader = req.headers && req.headers.authorization;
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+    try {
+      reqUser = jwt.verify(token, JWT_SECRET);
+    } catch (e) {
+      reqUser = null;
     }
-
-    await client.query('COMMIT');
-    res.json({ orderId });
-
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error(err);
-    res.status(400).json({ error: err.message });
-  } finally {
-    client.release();
   }
+
+  // if authenticated, check owner/admin
+  if (reqUser) {
+    if (order.user_id !== reqUser.id && reqUser.role !== 'admin')
+      return res.status(403).json({ error: 'Ei oikeuksia' });
+  } else {
+    // unauthenticated: allow if caller provided matching customer_name via query param
+    const provided = req.query.customer_name || '';
+    function normalizeForCompare(s) {
+      if (!s) return '';
+      try {
+        const n = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return n.toLowerCase().replace(/\s+/g, ' ').trim();
+      } catch (e) {
+        return s.toLowerCase().replace(/\s+/g, ' ').trim();
+      }
+    }
+    const providedNorm = normalizeForCompare(provided || '');
+    const storedNorm = normalizeForCompare(order.customer_name || '');
+    if (!(providedNorm && storedNorm && providedNorm === storedNorm)) {
+      return res.status(403).json({ error: 'Ei oikeuksia' });
+    }
+  }
+
+  const itemsRes = await db.query(
+    `SELECT oi.*, i.name, i.sku, i.image_url, i.short_description
+     FROM order_items oi
+     JOIN items i ON i.id = oi.item_id
+     WHERE oi.order_id=$1`,
+    [id]
+  );
+
+  res.json({ order, items: itemsRes.rows });
 });
 
 // =======================
@@ -178,29 +135,180 @@ router.post('/:orderId/add-group/:groupId', auth, async (req, res) => {
   }
 });
 
+// (GET /api/orders/:id now implemented above with optional unauthenticated name-based access)
+
 // =======================
-// GET /api/orders/:id
-// - vaatii authin
+// PATCH /api/orders/:id
+// - muokkaa tilausta (sis. tilauksen rivejä).
+// - Owner or admin (via JWT) can edit.
+// - If unauthenticated, caller may provide `customer_name` that exactly matches the
+//   stored order.customer_name to authorize the edit (convenience for email-less flow).
 // =======================
-router.get('/:id', auth, async (req, res) => {
-  const id = req.params.id;
+router.patch('/:id', async (req, res) => {
+  const orderId = parseInt(req.params.id, 10);
+  const {
+    customer_name,
+    organization,
+    delivery_point,
+    delivery_start,
+    return_at,
+    status,
+    items
+  } = req.body;
 
-  const orderRes = await db.query('SELECT * FROM orders WHERE id=$1', [id]);
-  if (!orderRes.rows.length) return res.status(404).json({ error: 'Tilausta ei löydy' });
+  const client = await db.connect();
 
-  const order = orderRes.rows[0];
-  if (order.user_id !== req.user.id && req.user.role !== 'admin')
-    return res.status(403).json({ error: 'Ei oikeuksia' });
+  try {
+    await client.query('BEGIN');
 
-  const itemsRes = await db.query(
-    `SELECT oi.*, i.name, i.sku, i.image_url, i.short_description
-     FROM order_items oi
-     JOIN items i ON i.id = oi.item_id
-     WHERE oi.order_id=$1`,
-    [id]
-  );
+    const oRes = await client.query('SELECT * FROM orders WHERE id=$1 FOR UPDATE', [orderId]);
+    if (!oRes.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Tilausta ei löydy' });
+    }
 
-  res.json({ order, items: itemsRes.rows });
+    const order = oRes.rows[0];
+
+    // Determine caller identity: if Authorization header with JWT present, verify it.
+    // If token missing/invalid, reqUser stays null and we will allow an unauthenticated
+    // edit only when the caller provided customer_name matching the stored order name.
+    let reqUser = null;
+    const authHeader = req.headers && req.headers.authorization;
+    if (authHeader) {
+      const token = authHeader.split(' ')[1];
+      try {
+        reqUser = jwt.verify(token, JWT_SECRET);
+      } catch (e) {
+        // invalid token -> treat as unauthenticated (do not fail here; we'll check name)
+        reqUser = null;
+      }
+    }
+
+    // permission: owner or admin OR unauthenticated request that provides matching customer_name
+    // Compare names in a case-insensitive and diacritic-insensitive way to be forgiving of
+    // user input (e.g. "Kimmo" === "kimmo" and "Åke" === "Ake").
+    function normalizeForCompare(s) {
+      if (!s) return '';
+      // Normalize to NFD, strip combining diacritic marks, lowercase, collapse spaces
+      try {
+        const n = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return n.toLowerCase().replace(/\s+/g, ' ').trim();
+      } catch (e) {
+        // Fallback if normalize fails for any reason
+        return s.toLowerCase().replace(/\s+/g, ' ').trim();
+      }
+    }
+
+    const providedNameRaw = customer_name || '';
+    const storedNameRaw = order.customer_name || '';
+    const providedNorm = normalizeForCompare(providedNameRaw);
+    const storedNorm = normalizeForCompare(storedNameRaw);
+    const isOwnerOrAdmin = reqUser && (order.user_id === reqUser.id || reqUser.role === 'admin');
+    const nameMatches = !reqUser && providedNorm && storedNorm && providedNorm === storedNorm;
+
+    if (!isOwnerOrAdmin && !nameMatches) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Ei oikeuksia; kirjaudu sisään tai toimita tilaajan nimi täsmälleen kuten tilauksessa' });
+    }
+
+    // If items are provided, update order items and adjust stock
+    if (Array.isArray(items)) {
+      // load existing order_items
+      const oldRes = await client.query('SELECT item_id, quantity FROM order_items WHERE order_id=$1', [orderId]);
+      const oldMap = new Map();
+      for (const r of oldRes.rows) oldMap.set(r.item_id, r.quantity);
+
+      // build new map and validate quantities
+      const newMap = new Map();
+      const newIds = [];
+      for (const it of items) {
+        const iid = parseInt(it.item_id, 10);
+        const qty = parseInt(it.quantity, 10) || 0;
+        if (!iid || qty < 0) {
+          throw new Error('Virheellinen item_id tai quantity');
+        }
+        newMap.set(iid, qty);
+        if (!newIds.includes(iid)) newIds.push(iid);
+      }
+
+      // affected ids = union of old and new
+      const affected = Array.from(new Set([...oldMap.keys(), ...newMap.keys()]));
+
+      if (affected.length) {
+        // lock affected items
+        const itemsRes = await client.query('SELECT id, name, sku, available_stock FROM items WHERE id = ANY($1::int[]) FOR UPDATE', [affected]);
+        const itemRows = new Map(itemsRes.rows.map(r => [r.id, r]));
+
+        // validate availability
+        for (const id of affected) {
+          const oldQty = oldMap.get(id) || 0;
+          const newQty = newMap.get(id) || 0;
+          const change = newQty - oldQty;
+          const row = itemRows.get(id);
+          if (!row) throw new Error(`Tuotetta ei löydy (${id})`);
+          if (change > 0 && row.available_stock < change) {
+            throw new Error(`Varasto ei riitä tuotteelle ${row.name}`);
+          }
+        }
+
+        // apply stock changes and audits
+        // Actor: prefer authenticated user id/email, otherwise use provided customer_name so audits are meaningful
+        const actor = reqUser ? (reqUser.id || reqUser.email) : (providedName || null);
+        for (const id of affected) {
+          const oldQty = oldMap.get(id) || 0;
+          const newQty = newMap.get(id) || 0;
+          const change = newQty - oldQty;
+          if (change === 0) continue;
+          // subtract change from available_stock (change may be negative)
+          await client.query('UPDATE items SET available_stock = available_stock - $1 WHERE id=$2', [change, id]);
+          // insert audit: store negative when reserving (consistent with create path)
+          await client.query('INSERT INTO stock_audit (item_id, order_id, delta, reason, actor) VALUES ($1,$2,$3,$4,$5)', [id, orderId, -change, `Order ${orderId} update`, actor]);
+        }
+
+        // replace order_items snapshot
+        await client.query('DELETE FROM order_items WHERE order_id=$1', [orderId]);
+        for (const [iid, qty] of newMap.entries()) {
+          const itemRow = itemRows.get(iid);
+          await client.query(
+            `INSERT INTO order_items (order_id, item_id, item_name, sku, quantity) VALUES ($1,$2,$3,$4,$5)`,
+            [orderId, iid, itemRow ? itemRow.name : null, itemRow ? itemRow.sku : null, qty]
+          );
+        }
+      }
+    }
+
+    // update order meta fields if provided
+    const fields = [];
+    const values = [];
+    let idx = 1;
+    if (customer_name !== undefined) { fields.push(`customer_name=$${idx++}`); values.push(customer_name); }
+    if (organization !== undefined) { fields.push(`organization=$${idx++}`); values.push(organization); }
+    if (delivery_point !== undefined) { fields.push(`delivery_point=$${idx++}`); values.push(delivery_point); }
+    if (delivery_start !== undefined) { fields.push(`delivery_start=$${idx++}`); values.push(delivery_start); }
+    if (return_at !== undefined) { fields.push(`return_at=$${idx++}`); values.push(return_at); }
+    if (status !== undefined) { fields.push(`status=$${idx++}`); values.push(status); }
+
+    if (fields.length) {
+      values.push(orderId);
+      const q = `UPDATE orders SET ${fields.join(',')}, updated_at=now() WHERE id=$${idx}`;
+      await client.query(q, values);
+    }
+
+    await client.query('COMMIT');
+
+    // return updated order + items
+    const orderRes2 = await db.query('SELECT * FROM orders WHERE id=$1', [orderId]);
+    const itemsRes2 = await db.query('SELECT oi.*, i.name, i.sku, i.image_url FROM order_items oi LEFT JOIN items i ON i.id = oi.item_id WHERE oi.order_id=$1', [orderId]);
+
+    res.json({ order: orderRes2.rows[0], items: itemsRes2.rows });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Order update error:', err);
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 // GET /api/orders

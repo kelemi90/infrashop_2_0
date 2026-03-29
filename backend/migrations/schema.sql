@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS items (
   short_description TEXT,
   long_description TEXT,
   image_url TEXT,
+  thumbnail_url TEXT,
   total_stock INT DEFAULT 0,
   available_stock INT DEFAULT 0,
   category TEXT,
@@ -116,6 +117,44 @@ CREATE TABLE IF NOT EXISTS stock_audit (
   reason TEXT,
   actor TEXT,
   created_at TIMESTAMP DEFAULT now()
+);
+
+-- ------------------------------
+-- archived_orders: snapshot of orders when archived/returned
+-- ------------------------------
+CREATE TABLE IF NOT EXISTS archived_orders (
+  id SERIAL PRIMARY KEY,
+  original_order_id INT,
+
+  customer_name TEXT NOT NULL,
+  organization TEXT,
+  delivery_point TEXT NOT NULL,
+
+  delivery_start TIMESTAMP NOT NULL,
+  return_at TIMESTAMP NOT NULL,
+
+  status TEXT NOT NULL,
+
+  pdf_path TEXT,
+
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP,
+
+  archived_at TIMESTAMP DEFAULT now()
+);
+
+-- ------------------------------
+-- archived_order_items: snapshot of order items
+-- ------------------------------
+CREATE TABLE IF NOT EXISTS archived_order_items (
+  id SERIAL PRIMARY KEY,
+  archived_order_id INT REFERENCES archived_orders(id) ON DELETE CASCADE,
+  original_order_item_id INT,
+  item_id INT,
+  item_name TEXT NOT NULL,
+  sku TEXT,
+  quantity INT NOT NULL,
+  created_at TIMESTAMP
 );
 
 -- ------------------------------

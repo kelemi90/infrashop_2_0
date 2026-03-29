@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
+import EditOrderModal from '../components/EditOrderModal';
 
 export default function OrdersPage(){
     const [orders, setOrders] = useState([]);
-    const [error, serError] = useState('');
+    const [error, setError] = useState('');
+    const [editingOrder, setEditingOrder] = useState(null);
 
     useEffect(() => {
         api.get('/orders')
             .then(res => setOrders(res.data))
-            .then(() => setError('Tilauksien haku epäonnistui'));
+            .catch(() => setError('Tilauksien haku epäonnistui'));
     }, []);
 
     return (
@@ -40,14 +42,18 @@ export default function OrdersPage(){
                             <td>{o.return_at?.slice(0,10)}</td>
                             <td>{o.status}</td>
                             <td>
-                                <a href={`/api/orders/${o.id}/pdf`} target="_blank" rel="noopener noreferrer">
-                                  Lataa PDF
-                                </a>
+                                                                                                <a href={`/api/orders/${o.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                                                                                                    Lataa PDF
+                                                                                                </a>
+                                                                                                <button style={{ marginLeft: 8 }} onClick={() => setEditingOrder(o.id)}>Muokkaa tilausta</button>
                             </td>
                         </tr>
                     ))}
                 </body>
             </table>
+            {editingOrder && (
+              <EditOrderModal orderId={editingOrder} onClose={() => setEditingOrder(null)} onSaved={({order, items}) => { setEditingOrder(null); api.get('/orders').then(r=>setOrders(r.data)); }} />
+            )}
         </div>
     );
 }

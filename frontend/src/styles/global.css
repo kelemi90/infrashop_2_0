@@ -14,6 +14,15 @@ a {
   text-decoration: none;
 }
 
+/* Orders page PDF link color */
+.orders-page a {
+  color: #60a5fa; /* blue-400 */
+}
+.orders-page a:hover {
+  color: #3b82f6; /* blue-500 */
+  text-decoration: underline;
+}
+
 button {
   font-family: inherit;
 }

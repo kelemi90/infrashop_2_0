@@ -2,6 +2,43 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+// Ensure archived tables exist (safe to run multiple times)
+(async () => {
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS archived_orders (
+        id SERIAL PRIMARY KEY,
+        original_order_id INT,
+        customer_name TEXT NOT NULL,
+        organization TEXT,
+        delivery_point TEXT NOT NULL,
+        delivery_start TIMESTAMP NOT NULL,
+        return_at TIMESTAMP NOT NULL,
+        status TEXT NOT NULL,
+        pdf_path TEXT,
+        created_at TIMESTAMP,
+        updated_at TIMESTAMP,
+        archived_at TIMESTAMP DEFAULT now()
+      )
+    `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS archived_order_items (
+        id SERIAL PRIMARY KEY,
+        archived_order_id INT REFERENCES archived_orders(id) ON DELETE CASCADE,
+        original_order_item_id INT,
+        item_id INT,
+        item_name TEXT NOT NULL,
+        sku TEXT,
+        quantity INT NOT NULL,
+        created_at TIMESTAMP
+      )
+    `);
+  } catch (err) {
+    console.error('Failed to ensure archived tables:', err);
+  }
+})();
+
 // list events
 router.get('/', async (req, res) => {
   const r = await db.query('SELECT * FROM events ORDER BY start_date DESC');
@@ -16,7 +53,7 @@ router.get('/:id/grouped-orders', async (req, res) => {
      FROM order_items oi
      JOIN orders o ON oi.order_id = o.id
      JOIN items i ON oi.item_id = i.id
-     WHERE o.event_id = $1 AND o.status IN ('placed','fulfilled')
+     WHERE o.event_id = $1 AND o.status IN ('placed','fulfilled','returned','archived')
      GROUP BY i.id, i.name, i.sku, i.image_url
      ORDER BY i.name`, [id]
   );
@@ -37,6 +74,29 @@ router.post('/:id/return-to-stock', async (req, res) => {
        WHERE o.event_id = $1 AND o.status IN ('fulfilled','placed') 
        GROUP BY oi.item_id`, [id]
     );
+
+    // Archive orders & order_items for this event before returning stock
+    const ordersToArchive = await client.query(
+      `SELECT * FROM orders WHERE event_id = $1 AND status IN ('fulfilled','placed')`, [id]
+    );
+
+    for (const ord of ordersToArchive.rows) {
+      const ar = await client.query(
+        `INSERT INTO archived_orders (original_order_id, customer_name, organization, delivery_point, delivery_start, return_at, status, pdf_path, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+        [ord.id, ord.customer_name, ord.organization, ord.delivery_point, ord.delivery_start, ord.return_at, ord.status, ord.pdf_path, ord.created_at, ord.updated_at]
+      );
+
+      const archivedId = ar.rows[0].id;
+      const itemsRes = await client.query('SELECT * FROM order_items WHERE order_id = $1', [ord.id]);
+      for (const it of itemsRes.rows) {
+        await client.query(
+          `INSERT INTO archived_order_items (archived_order_id, original_order_item_id, item_id, item_name, sku, quantity, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [archivedId, it.id, it.item_id, it.item_name, it.sku, it.quantity, it.created_at]
+        );
+      }
+    }
 
     for (const row of totals.rows) {
       await client.query('UPDATE items SET available_stock = available_stock + $1, updated_at = now() WHERE id = $2', [row.qty, row.item_id]);

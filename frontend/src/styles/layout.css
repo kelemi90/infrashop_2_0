@@ -44,6 +44,101 @@
   text-decoration: underline;
 }
 
+/* two-line nav label for admin */
+.nav .nav-multiline {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1;
+}
+.nav .nav-multiline span.muted {
+  font-size: 0.75rem;
+  color: #cbd5e1;
+}
+
+/* Admin quick-create button in nav */
+.nav .admin-btn {
+  margin-left: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 1rem;
+  text-decoration: none;
+}
+
+.nav .admin-btn:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+/* small circular shortcut next to admin links */
+.nav .admin-shortcut {
+  margin-left: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: #10b981; /* green */
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nav .admin-shortcut:hover { background: #059669; }
+
+/* Admin editing split layout used by ItemImageEdit page */
+.admin-split {
+  display: flex;
+  gap: 20px;
+  height: calc(100vh - var(--app-header-height, 80px) - var(--app-footer-height, 0px));
+  overflow: hidden;
+}
+.admin-left {
+  min-width: 260px;
+  max-width: 320px;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+.admin-right {
+  flex: 1;
+  height: 100%;
+  overflow: auto;
+}
+.admin-left .search-box {
+  position: sticky;
+  top: 0;
+  background: transparent;
+  padding: 8px 0;
+  z-index: 2;
+}
+.admin-left .search-box input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+.admin-left ul.item-list { list-style:none; padding:0; margin:0; }
+.admin-left ul.item-list li { padding:6px 0; border-bottom: 1px solid #f2f4f6; }
+
+/* edit box styling used in ItemImageEdit */
+.edit-box { margin-top:10px; padding:12px; border:1px solid #eee; border-radius:6px; background:#fff; }
+.edit-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+.edit-label { width:120px; color:#475569; font-size:0.95rem; }
+.edit-field input, .edit-field textarea { width:316px; max-width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; }
+.edit-field textarea { min-height:80px; resize:vertical; }
+.edit-field.small input { width:120px; }
+
+/* make static values (like SKU) clearly visible */
+.edit-field span {
+  color: #0f172a; /* dark */
+  font-weight: 600;
+}
+
 /* ===== MAIN ===== */
 
 .main {

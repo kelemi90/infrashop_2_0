@@ -1,12 +1,63 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+const sharp = require('sharp');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'replace-me';
+
+// generate a reasonable SKU from the name and ensure uniqueness
+async function generateSkuFromName(name) {
+  const base = (name || 'item').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'item';
+  let attempt = 0;
+  while (true) {
+    let candidate = base;
+    if (attempt > 0) {
+      // append a short random suffix to avoid collisions
+      candidate = `${base}-${Math.random().toString(36).slice(2,6)}`;
+    }
+    const exists = await db.query('SELECT 1 FROM items WHERE sku=$1', [candidate]);
+    if (exists.rows.length === 0) return candidate;
+    attempt++;
+    if (attempt > 20) {
+      // fallback: timestamp-based
+      return `${base}-${Date.now().toString().slice(-6)}`;
+    }
+  }
+}
+
+function authAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'No auth' });
+  const token = authHeader.split(' ')[1];
+  try {
+    const user = jwt.verify(token, JWT_SECRET);
+    if (user.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
+    req.user = user;
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// configure multer to store uploads in memory so we can validate/resize with sharp
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // limit to 5MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only JPEG, PNG and WEBP images are allowed'));
+  }
+});
 
 /* GET all items */
 router.get('/', async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, sku, name, short_description, image_url, available_stock, category FROM items ORDER BY name'
+      'SELECT id, sku, name, short_description, image_url, thumbnail_url, available_stock, category FROM items ORDER BY name'
     );
     res.json(result.rows);
   } catch (err) {
@@ -21,7 +72,7 @@ router.get('/:id', async (req, res) => {
     const itemId = req.params.id;
 
     const result = await db.query(
-      'SELECT id, sku, name, short_description, image_url, available_stock, category FROM items WHERE id = $1',
+      'SELECT id, sku, name, short_description, image_url, thumbnail_url, available_stock, category FROM items WHERE id = $1',
       [itemId]
     );
 
@@ -36,4 +87,113 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// POST /api/items/:id/image - upload an image for an item and update its image_url
+router.post('/:id/image', authAdmin, upload.single('image'), async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    // ensure images dir exists
+    const imagesDir = path.join(__dirname, '..', 'public', 'images');
+    await fs.promises.mkdir(imagesDir, { recursive: true });
+
+    // sanitize original name
+  const original = req.file.originalname || 'upload';
+  // strip original extension so we don't double-up
+  const noExt = original.replace(/\.[^/.]+$/, '');
+  const base = noExt.replace(/[^a-z0-9.\-]/gi, '_');
+
+    // pick output format based on mimetype
+    let ext = 'jpg';
+    let format = 'jpeg';
+    if (req.file.mimetype === 'image/png') {
+      ext = 'png';
+      format = 'png';
+    } else if (req.file.mimetype === 'image/webp') {
+      ext = 'webp';
+      format = 'webp';
+    }
+
+  const filename = `${Date.now()}_${base}.${ext}`;
+  const outPath = path.join(imagesDir, filename);
+
+  // resize to max width 1200px, keep aspect ratio, don't enlarge (main image)
+  const transformer = sharp(req.file.buffer).rotate().resize({ width: 1200, withoutEnlargement: true });
+  if (format === 'jpeg') transformer.jpeg({ quality: 80 });
+  if (format === 'png') transformer.png({ compressionLevel: 8 });
+  if (format === 'webp') transformer.webp({ quality: 80 });
+
+  await transformer.toFile(outPath);
+
+  // create thumbnail (300px width)
+  const thumbFilename = `${Date.now()}_${base}_thumb.${ext}`;
+  const thumbPath = path.join(imagesDir, thumbFilename);
+  const thumbTransformer = sharp(req.file.buffer).rotate().resize({ width: 300, withoutEnlargement: true });
+  if (format === 'jpeg') thumbTransformer.jpeg({ quality: 70 });
+  if (format === 'png') thumbTransformer.png({ compressionLevel: 9 });
+  if (format === 'webp') thumbTransformer.webp({ quality: 70 });
+  await thumbTransformer.toFile(thumbPath);
+
+  await db.query('UPDATE items SET image_url=$1, thumbnail_url=$2, updated_at=now() WHERE id=$3', [filename, thumbFilename, id]);
+  const item = (await db.query('SELECT id, name, image_url, thumbnail_url, available_stock FROM items WHERE id=$1', [id])).rows[0];
+    res.json({ ok: true, item });
+  } catch (err) {
+    console.error('Image upload error:', err);
+    // multer fileFilter error may arrive here; give helpful 400
+    if (err.message && err.message.includes('Only')) return res.status(400).json({ error: err.message });
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'File too large (max 5MB)' });
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
 module.exports = router;
+
+// PUT /api/items/:id - update item (admin only)
+router.put('/:id', authAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { sku, name, short_description, total_stock, available_stock, category } = req.body;
+
+    const existingRes = await db.query('SELECT * FROM items WHERE id=$1', [id]);
+    if (!existingRes.rows.length) return res.status(404).json({ error: 'Item not found' });
+    const existing = existingRes.rows[0];
+
+    const newSku = sku !== undefined ? sku : existing.sku;
+    const newName = name !== undefined ? name : existing.name;
+    const newShort = short_description !== undefined ? short_description : existing.short_description;
+    const newTotal = total_stock !== undefined ? total_stock : existing.total_stock;
+    const newAvail = available_stock !== undefined ? available_stock : existing.available_stock;
+    const newCat = category !== undefined ? category : existing.category;
+
+    await db.query(
+      `UPDATE items SET sku=$1, name=$2, short_description=$3, total_stock=$4, available_stock=$5, category=$6, updated_at=now() WHERE id=$7`,
+      [newSku, newName, newShort, newTotal, newAvail, newCat, id]
+    );
+
+    const item = (await db.query('SELECT id, sku, name, short_description, image_url, thumbnail_url, total_stock, available_stock, category FROM items WHERE id=$1', [id])).rows[0];
+    res.json(item);
+  } catch (err) {
+    console.error('Update item error:', err);
+    res.status(500).json({ error: 'Failed to update item' });
+  }
+});
+
+// POST /api/items - create a new item (admin only)
+router.post('/', authAdmin, async (req, res) => {
+  try {
+    const { sku, name, short_description, total_stock, available_stock, category } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required' });
+    // if sku not provided, generate one from the name and ensure uniqueness
+    let finalSku = sku && String(sku).trim() ? String(sku).trim() : await generateSkuFromName(name);
+    const r = await db.query(
+      `INSERT INTO items (sku, name, short_description, total_stock, available_stock, category, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6, now(), now()) RETURNING id, sku, name, short_description, image_url, thumbnail_url, total_stock, available_stock, category`,
+      [finalSku, name, short_description || null, total_stock || 0, available_stock || 0, category || null]
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    console.error('Create item error:', err);
+    res.status(500).json({ error: 'Failed to create item' });
+  }
+});
+

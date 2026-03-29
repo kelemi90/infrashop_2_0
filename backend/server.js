@@ -20,6 +20,17 @@ app.use(express.json());
 // images
 app.use('/images', express.static('public/images'));
 
+// Ensure items table has thumbnail_url column (safe to run multiple times)
+const db = require('./db');
+(async () => {
+    try {
+        await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS thumbnail_url TEXT");
+        console.log('Ensured thumbnail_url column exists on items');
+    } catch (err) {
+        console.error('Failed to ensure thumbnail_url column:', err);
+    }
+})();
+
 
 // routes
 app.use('/api/auth', authRoutes);

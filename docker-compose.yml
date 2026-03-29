@@ -19,7 +19,7 @@ services:
       DATABASE_URL: postgresql://infrashop:supersecret@db:5432/infrashop
       JWT_SECRET: replace-me
     volumes:
-      - ./backend/public/images:/app/public/images
+      - images-data:/app/public/images
     depends_on:
       - db
     ports:
@@ -50,6 +50,7 @@ services:
 
 volumes:
   db-data:
+  images-data:
 
 networks:
   infranet:
