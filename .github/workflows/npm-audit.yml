@@ -1,0 +1,48 @@
+name: npm audit (frontend & backend)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  audit:
+    name: Audit ${{ matrix.dir }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: [frontend, backend]
+        node: [18]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Cache node modules and lockfile
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ matrix.dir }}/node_modules
+            ${{ matrix.dir }}/package-lock.json
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ hashFiles(format('{0}/package-lock.json', matrix.dir)) }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node }}-
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.dir }}
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Run npm audit (fail if >= moderate)
+        working-directory: ${{ matrix.dir }}
+        run: npm audit --audit-level=moderate

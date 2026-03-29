@@ -134,28 +134,41 @@ if [ -d "backend/public/images" ]; then
   log "backend/public/images directory exists on host. (Ensure you placed product images here if needed.)"
 fi
 
-# Create or promote admin user
+# Create or promote admin user using the safe wrapper script. This runs the
+# Node script inside a temporary Node container attached to the Compose network
+# so the production backend image doesn't need Node or bcrypt installed.
 log "Creating or promoting admin user: $ADMIN_EMAIL"
-# Generate bcrypt hash inside a node one-liner using the backend image's node (if available)
-HASH=$(docker compose exec -T backend node -e "console.log(require('bcrypt').hashSync(process.env.PASS,10))"  PASS="$ADMIN_PASS" 2>/dev/null || true)
-if [ -z "$HASH" ]; then
-  log "Backend container doesn't expose node or bcrypt; attempting to use host node..."
-  if command -v node >/dev/null 2>&1; then
-    HASH=$(node -e "console.log(require('bcrypt').hashSync(process.env.PASS,10))" PASS="$ADMIN_PASS")
-  else
-    err "Could not generate bcrypt hash (no node available in backend container or host). Provide an already hashed password in SQL or install node."
-  fi
-fi
 
-EXISTS=$(docker compose exec -T db psql -U infrashop -d infrashop -tAc "SELECT COUNT(*) FROM users WHERE email='${ADMIN_EMAIL}';" | tr -d '[:space:]') || true
-if [ "$EXISTS" = "0" ] || [ -z "$EXISTS" ]; then
-  log "Inserting new admin user..."
-  docker compose exec -T db psql -U infrashop -d infrashop -c "INSERT INTO users (email,password_hash,display_name,role) VALUES ('${ADMIN_EMAIL}','${HASH}','${ADMIN_NAME}','admin');"
-  log "Admin user created."
+if [ "$DRY_RUN" -eq 1 ]; then
+  log "DRY-RUN: Would run ./scripts/run_create_admin.sh with ADMIN_EMAIL=$ADMIN_EMAIL"
 else
-  log "User exists; promoting to admin and updating password hash..."
-  docker compose exec -T db psql -U infrashop -d infrashop -c "UPDATE users SET role='admin', password_hash='${HASH}' WHERE email='${ADMIN_EMAIL}';"
-  log "User promoted to admin and password updated."
+  if [ -x "./scripts/run_create_admin.sh" ]; then
+    log "Running ./scripts/run_create_admin.sh ..."
+    ADMIN_EMAIL="$ADMIN_EMAIL" ADMIN_PASSWORD="$ADMIN_PASS" ADMIN_DISPLAY_NAME="$ADMIN_NAME" ./scripts/run_create_admin.sh || {
+      log "run_create_admin.sh failed; falling back to in-place generation (legacy path)"
+      # legacy fallback: try to generate hash using backend or host node and update DB
+      HASH=$(docker compose exec -T backend node -e "console.log(require('bcrypt').hashSync(process.env.PASS,10))"  PASS="$ADMIN_PASS" 2>/dev/null || true)
+      if [ -z "$HASH" ]; then
+        if command -v node >/dev/null 2>&1; then
+          HASH=$(node -e "console.log(require('bcrypt').hashSync(process.env.PASS,10))" PASS="$ADMIN_PASS")
+        else
+          err "Could not generate bcrypt hash (no node available in backend container or host). Provide an already hashed password in SQL or install node."
+        fi
+      fi
+      EXISTS=$(docker compose exec -T db psql -U infrashop -d infrashop -tAc "SELECT COUNT(*) FROM users WHERE email='${ADMIN_EMAIL}';" | tr -d '[:space:]') || true
+      if [ "$EXISTS" = "0" ] || [ -z "$EXISTS" ]; then
+        log "Inserting new admin user..."
+        docker compose exec -T db psql -U infrashop -d infrashop -c "INSERT INTO users (email,password_hash,display_name,role) VALUES ('${ADMIN_EMAIL}','${HASH}','${ADMIN_NAME}','admin');"
+        log "Admin user created."
+      else
+        log "User exists; promoting to admin and updating password hash..."
+        docker compose exec -T db psql -U infrashop -d infrashop -c "UPDATE users SET role='admin', password_hash='${HASH}' WHERE email='${ADMIN_EMAIL}';"
+        log "User promoted to admin and password updated."
+      fi
+    }
+  else
+    err "./scripts/run_create_admin.sh not found or not executable. Install/run the script or create admin manually."
+  fi
 fi
 
 log "Setup complete."

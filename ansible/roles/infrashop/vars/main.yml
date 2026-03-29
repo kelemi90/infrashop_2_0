@@ -1,0 +1,11 @@
+---
+# Role variables for infrashop installation
+install_user: infrashop
+install_dir: /srv/infrashop
+repo_url: 'https://github.com/kelemi90/infrashop_2_0.git'
+repo_version: main
+
+# Admin user to create during setup (optional)
+admin_email: 'admin@example.com'
+admin_password: 'change-me'
+admin_name: 'Site Admin'

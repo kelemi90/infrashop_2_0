@@ -13,9 +13,11 @@
    - cd frontend && npm install && npm run dev
 5. Browse: http://localhost:5173
 
+Note: when running via Docker (see below) the frontend is served through nginx on port 80 by default; the Vite dev server still runs on 5173 when started with `npm run dev`.
+
 ## Docker (docker compose)
 
-The repository includes a `docker-compose.yml` that builds and runs the stack (Postgres, backend, frontend, nginx). The backend serves static images from `backend/public/images` at the path `/images` and the compose file mounts the host `./backend/public/images` into the backend container so you can add images on the host and have them available inside the container.
+The repository includes a `docker-compose.yml` that builds and runs the stack (Postgres, backend, frontend, nginx). The backend serves static images from `backend/public/images` at the path `/images` and the compose file mounts the host `./backend/public/images` into the backend container so you can add images on the host and have them available inside the container. The recommended CLI is the Docker plugin form `docker compose` (no hyphen).
 
 Typical workflow to build and run the project with Docker:
 
@@ -50,6 +52,8 @@ curl -I http://localhost/images/arkkupakastin.jpg
 ```
 
 If both return 200, the image serving is working.
+
+Note about persistence: the setup helper (`scripts/setup_prod.sh`) will detect when `backend/public/images` is backed by a named Docker volume and can populate that volume from the repo on first run; backups are created under `scripts/backup/` unless you pass `--no-backup`.
 
 ### Files and config notes
 
@@ -183,6 +187,42 @@ curl -I http://localhost/images/arkkupakastin.jpg
 ```
 
 If you want, add the mapping CSV and a migration so future runs seed with the correct `image_url` values automatically.
+
+--
+
+## Admin user (create/promote) — updated workflow
+
+New safe helper: `scripts/run_create_admin.sh`
+
+This project now includes a small, portable helper that runs the admin creation script inside a temporary Node container attached to the Compose network. This avoids needing Node/bcrypt inside the production backend image and prevents truncated hashes when creating/updating users.
+
+Usage (non-interactive):
+
+```bash
+# defaults to Buildcat / buildcat
+./scripts/run_create_admin.sh
+
+# specify credentials
+./scripts/run_create_admin.sh --email admin@example.com --password S3cret --display 'Site Admin'
+```
+
+The `scripts/setup_prod.sh` setup helper now calls this wrapper during bootstrap (it respects `--dry-run` and `--no-backup` flags). If the wrapper fails, the setup script will fall back to an internal hash generation method.
+
+If you prefer to manually create and promote a user, the old instructions still work (signup via API + psql promote). There's also a `scripts/check_truncated_hashes.sh` helper that lists users with unusually short `password_hash` values so you can inspect and fix them.
+
+## Dependency security: npm overrides and rationale
+
+During a recent dependency audit we upgraded a set of direct dependencies (backend and frontend) and introduced a short-term `npm` override in `frontend/package.json` to pin `picomatch` to a safe, non-vulnerable version. The override is a conservative, temporary mitigation for a transitive vulnerability that is still present in one or more upstream packages (for example `micromatch` / `@parcel/watcher`).
+
+Why an override?
+- Some advisories affect deeply nested packages. Waiting for every upstream package to release and for those releases to be pulled through can take time; an `overrides` entry forces a safe version across the dependency tree immediately.
+
+What to do next
+- When upstream projects release fixes, remove the `overrides` entry and run `npm install` to allow the normal dependency graph to resume.
+- Prefer upgrading the direct parent packages (for example `@tailwindcss/cli` or `micromatch`) where possible; removing the override is the long-term goal.
+- The project includes a CI job that will run `npm audit --audit-level=moderate` on both `frontend` and `backend` to catch regressions (see `.github/workflows/npm-audit.yml`).
+
+If you're uncertain about changing the override, open a draft PR and run the project's CI to confirm there are no new advisories.
 
 ## Admin user (create/promote)
 

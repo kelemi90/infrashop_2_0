@@ -1,0 +1,38 @@
+[Unit]
+Description=Infrashop Docker Compose (runs as dedicated user)
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+# Run as dedicated non-root user
+User={{ install_user }}
+Group=docker
+
+WorkingDirectory={{ install_dir }}
+Environment=COMPOSE_HTTP_TIMEOUT=200
+
+# Start / stop
+ExecStart=/usr/bin/docker compose -f {{ install_dir }}/docker-compose.yml up -d --build
+ExecStop=/usr/bin/docker compose -f {{ install_dir }}/docker-compose.yml down
+
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=300
+TimeoutStopSec=30
+StartLimitBurst=3
+StartLimitIntervalSec=60
+KillMode=control-group
+
+# Conservative hardening
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

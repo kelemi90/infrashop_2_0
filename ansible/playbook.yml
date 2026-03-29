@@ -1,0 +1,8 @@
+---
+- name: Install and configure Infrashop
+  hosts: infrashop
+  become: true
+  vars_files:
+    - roles/infrashop/vars/main.yml
+  roles:
+    - infrashop

@@ -1,0 +1,45 @@
+[Unit]
+Description=Infrashop Docker Compose (runs as dedicated user)
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+# Run as a dedicated non-root user that is member of the 'docker' group
+User=infrashop
+Group=docker
+
+WorkingDirectory=/srv/infrashop
+Environment=COMPOSE_HTTP_TIMEOUT=200
+
+# Start/stop the Compose stack
+ExecStart=/usr/bin/docker compose up -d --build
+ExecStop=/usr/bin/docker compose down
+
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=300
+TimeoutStopSec=30
+StartLimitBurst=3
+StartLimitIntervalSec=60
+KillMode=control-group
+
+# Hardening flags (conservative - adjust as needed)
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
+
+# Notes:
+# - Ensure the user 'infrashop' exists and is a member of the 'docker' group so it can talk
+#   to the Docker socket at /var/run/docker.sock.
+# - Place a copy of this file at /etc/systemd/system/infrashop.service and run:
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable --now infrashop.service

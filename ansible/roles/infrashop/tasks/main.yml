@@ -1,0 +1,122 @@
+---
+- name: Ensure apt cache is up to date
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Install prerequisite packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - git
+      - openssl
+    state: present
+
+- name: Add Docker GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ ansible_architecture }}] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+    state: present
+
+- name: Install Docker and Compose plugin
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Ensure docker group exists
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Create dedicated install user
+  ansible.builtin.user:
+    name: "{{ install_user }}"
+    comment: "Infrashop service account"
+    shell: /bin/bash
+    create_home: no
+    groups: docker
+    state: present
+
+- name: Ensure install directory exists
+  ansible.builtin.file:
+    path: "{{ install_dir }}"
+    state: directory
+    owner: "{{ install_user }}"
+    group: "{{ install_user }}"
+    mode: '0755'
+
+- name: Clone application repository
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ install_dir }}"
+    version: "{{ repo_version }}"
+    force: yes
+    update: yes
+  register: git_clone
+
+- name: Ensure helper scripts are executable
+  ansible.builtin.file:
+    path: "{{ install_dir }}/scripts/{{ item }}"
+    mode: '0755'
+    owner: "{{ install_user }}"
+    group: "{{ install_user }}"
+  loop:
+    - setup_prod.sh
+    - run_create_admin.sh
+    - check_truncated_hashes.sh
+
+- name: Generate JWT secret if not present
+  ansible.builtin.command: openssl rand -hex 32
+  register: jwt_secret
+  changed_when: false
+
+- name: Write .env file
+  ansible.builtin.copy:
+    dest: "{{ install_dir }}/.env"
+    content: |
+      JWT_SECRET={{ jwt_secret.stdout }}
+    owner: "{{ install_user }}"
+    group: "{{ install_user }}"
+    mode: '0600'
+
+- name: Render systemd service
+  ansible.builtin.template:
+    src: infrashop.service.j2
+    dest: /etc/systemd/system/infrashop.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd
+
+- name: Add install_user to docker group (ensure membership)
+  ansible.builtin.user:
+    name: "{{ install_user }}"
+    groups: docker
+    append: yes
+
+- name: Run setup script to bootstrap database and images (non-interactive)
+  ansible.builtin.command: "{{ install_dir }}/scripts/setup_prod.sh --no-backup"
+  args:
+    chdir: "{{ install_dir }}"
+  become_user: "{{ install_user }}"
+  environment:
+    ADMIN_EMAIL: "{{ admin_email }}"
+    ADMIN_PASS: "{{ admin_password }}"
+    ADMIN_NAME: "{{ admin_name }}"
+
+- name: Enable and start infrashop systemd service
+  ansible.builtin.systemd:
+    name: infrashop
+    enabled: yes
+    state: started
