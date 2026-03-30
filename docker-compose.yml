@@ -1,10 +1,11 @@
 services:
   db:
     image: postgres:15
+    env_file: .env
     environment:
-      POSTGRES_DB: infrashop
-      POSTGRES_USER: infrashop
-      POSTGRES_PASSWORD: supersecret
+      POSTGRES_DB: ${POSTGRES_DB:-infrashop}
+      POSTGRES_USER: ${POSTGRES_USER:-infrashop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./backend/varasto.csv:/varasto.csv
@@ -15,9 +16,10 @@ services:
 
   backend:
     build: ./backend
+    env_file: .env
     environment:
-      DATABASE_URL: postgresql://infrashop:supersecret@db:5432/infrashop
-      JWT_SECRET: replace-me
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}}
+      JWT_SECRET: ${JWT_SECRET}
     volumes:
       - images-data:/app/public/images
     depends_on:

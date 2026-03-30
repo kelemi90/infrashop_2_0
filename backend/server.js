@@ -31,6 +31,36 @@ const db = require('./db');
     }
 })();
 
+// Startup checks for production readiness
+const JWT_SECRET = process.env.JWT_SECRET || 'replace-me';
+(async () => {
+    try {
+        if (process.env.NODE_ENV === 'production' && (!JWT_SECRET || JWT_SECRET === 'replace-me')) {
+            console.error('\nERROR: JWT_SECRET is not set or uses the insecure default.\nPlease set a strong JWT_SECRET in your environment before starting in production.\n');
+            process.exit(1);
+        }
+
+        // warn if default admin user exists
+        const r = await db.query("SELECT id,email,display_name,role FROM users WHERE email=$1 OR display_name=$1", ['Buildcat']);
+        if (r.rows.length) {
+            console.warn('WARNING: Default admin account (Buildcat) exists. Replace or remove this account before public release.');
+        }
+    } catch (err) {
+        console.error('Startup checks failed:', err && err.message ? err.message : err);
+        // don't exit; allow server to continue in dev environments
+    }
+})();
+
+// healthcheck
+app.get('/api/health', async (req, res) => {
+    try {
+        const r = await db.query('SELECT 1');
+        res.json({ status: 'ok', db: r ? 'ok' : 'error' });
+    } catch (err) {
+        res.status(500).json({ status: 'error', error: err.message });
+    }
+});
+
 
 // routes
 app.use('/api/auth', authRoutes);
