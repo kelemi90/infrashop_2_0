@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
 
+  event_id INT REFERENCES events(id),
+
   customer_name TEXT NOT NULL,
   organization TEXT,
   delivery_point TEXT NOT NULL,
@@ -69,6 +71,10 @@ CREATE TABLE IF NOT EXISTS orders (
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
 );
+
+-- Ensure event_id exists on already-created orders table
+ALTER TABLE orders
+  ADD COLUMN IF NOT EXISTS event_id INT REFERENCES events(id);
 
 -- ------------------------------
 -- order_items: tilauksen sisältämät tuotteet
@@ -157,7 +163,7 @@ CREATE TABLE IF NOT EXISTS archived_order_items (
   created_at TIMESTAMP
 );
 
--- ------------------------------
+/*-- ------------------------------
 -- SAMPLE DATA: käyttäjä, tapahtuma ja tuotteet
 -- ------------------------------
 INSERT INTO users (email, password_hash, display_name, role)
@@ -191,3 +197,4 @@ BEGIN
   END IF;
 END
 $$;
+*/

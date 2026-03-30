@@ -54,7 +54,7 @@ jobs:
           POSTGRES_USER: infrashop
           POSTGRES_PASSWORD: supersecret
           POSTGRES_DB: infrashop
-          DB_HOST: postgres
+          DB_HOST: localhost
         run: npm run migrate:apply
       - name: Create admin user
         working-directory: backend
@@ -62,12 +62,12 @@ jobs:
           ADMIN_EMAIL: ci-admin@example.com
           ADMIN_PASSWORD: ciPassw0rd!
           ADMIN_DISPLAY_NAME: CI Admin
-          DATABASE_URL: postgresql://infrashop:supersecret@postgres:5432/infrashop
+          DATABASE_URL: postgresql://infrashop:supersecret@localhost:5432/infrashop
         run: node scripts/create_admin.js
       - name: Start backend
         working-directory: backend
         env:
-          DATABASE_URL: postgresql://infrashop:supersecret@postgres:5432/infrashop
+          DATABASE_URL: postgresql://infrashop:supersecret@localhost:5432/infrashop
           JWT_SECRET: test-secret-ci
         run: |
           nohup node server.js &

@@ -139,9 +139,18 @@ router.post('/:id/image', authAdmin, upload.single('image'), async (req, res) =>
     res.json({ ok: true, item });
   } catch (err) {
     console.error('Image upload error:', err);
-    // multer fileFilter error may arrive here; give helpful 400
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'File too large (max 5MB)' });
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ error: 'Unexpected upload field' });
+      }
+      return res.status(400).json({ error: err.message || 'Upload validation failed' });
+    }
+
+    // fileFilter custom validation error
     if (err.message && err.message.includes('Only')) return res.status(400).json({ error: err.message });
-    if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'File too large (max 5MB)' });
     res.status(500).json({ error: 'Upload failed' });
   }
 });

@@ -72,7 +72,7 @@ Päätylaatta (eurotruss),2,trussit,70,,,,2
 Päätylaatta (globaltruss/omavalmiste),2,trussit,71,,,,2
 "Trussit 3,5m trussi",2,trussit,72,,,,2
 Trussit 5m trussi,2,trussit,73,,,,2
-Arkkupakastin,1,kodinkoneet,74,,,,1
+Arkkupakastin,1,kodinkoneet,74,,,arkkupakastin.jpg,1
 Kiertoilmauuni,1,kodinkoneet,75,,,,1
 3D kulma,1,trussit,76,,,,1
 Vaneripöydät F-info,10,pöydät,77,193cm*60cm,Vain infon käytössä olevat pöydät. Etureunassa kaiteelle reiät,,10
@@ -92,4 +92,4 @@ Mikro,0,kodinkoneet,87,,,,0
 trussi paketti,0,trussit,91,,,,0
 "Trussit 1,5m trussi",0,trussit,92,,,,0
 Valkokangas,0,muut,93,,,,0
-Vaneripöydät Gk,24,pöydät,94,248cm*75cm, Etureunassa reikä kaiteelle,,,24
+Vaneripöydät Gk,24,pöydät,94,248cm*75cm, Etureunassa reikä kaiteelle,,24

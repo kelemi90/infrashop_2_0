@@ -34,6 +34,12 @@ const db = require('../db');
         created_at TIMESTAMP
       )
     `);
+
+    // Older schema versions may miss orders.event_id, which breaks archive views.
+    await db.query(`
+      ALTER TABLE orders
+      ADD COLUMN IF NOT EXISTS event_id INT REFERENCES events(id)
+    `);
   } catch (err) {
     console.error('Failed to ensure archived tables:', err);
   }
