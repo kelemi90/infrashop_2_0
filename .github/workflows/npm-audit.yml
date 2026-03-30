@@ -13,7 +13,8 @@ jobs:
     strategy:
       matrix:
         dir: [frontend, backend]
-        node: [18]
+        # Use Node 20 to match frontend build and avoid engine incompatibilities
+        node: [20]
 
     steps:
       - name: Checkout
