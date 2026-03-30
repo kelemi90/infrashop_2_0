@@ -4,6 +4,69 @@ const db = require('../db');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'replace-me';
 
+const POWER_ITEMS = new Set([
+  'sahkot 1x16a 230v 3000w',
+  'sahkot 230v',
+  'sahkot 3x16a 400v 9000w',
+  'sahkot 3x32a 400v 15000w',
+  'sahkot muu'
+]);
+
+const NETWORK_ITEMS = new Set([
+  'verkko-10g lr',
+  'verkko-10g sr',
+  'verkko-1g base-t'
+]);
+
+const LIGHTING_ITEMS = new Set([
+  'valaistus',
+  'rgb wash pixel ohjattu'
+]);
+
+function normalizeItemName(value) {
+  if (!value) return '';
+  try {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  } catch (e) {
+    return String(value).toLowerCase().trim();
+  }
+}
+
+function requiredRequirementKeysFromItems(itemNames) {
+  const keys = new Set();
+  for (const n of itemNames) {
+    const nn = normalizeItemName(n);
+    if (POWER_ITEMS.has(nn)) keys.add('power');
+    if (NETWORK_ITEMS.has(nn)) keys.add('network');
+    if (LIGHTING_ITEMS.has(nn)) keys.add('lighting');
+  }
+  return Array.from(keys);
+}
+
+function sanitizeSpecialRequirements(input) {
+  const src = (input && typeof input === 'object') ? input : {};
+  const out = {};
+
+  if (typeof src.power === 'string' && src.power.trim()) out.power = src.power.trim();
+  if (typeof src.network === 'string' && src.network.trim()) out.network = src.network.trim();
+  if (typeof src.lighting === 'string' && src.lighting.trim()) out.lighting = src.lighting.trim();
+
+  return out;
+}
+
+// Keep schema backward-compatible on existing databases.
+(async () => {
+  try {
+    await db.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS special_requirements JSONB');
+  } catch (err) {
+    console.error('Failed to ensure orders.special_requirements:', err);
+  }
+})();
+
 // =======================
 // Auth middleware (vain ryhmien lisäykseen / tilauksen hakuun)
 function auth(req, res, next) {
@@ -17,6 +80,125 @@ function auth(req, res, next) {
     return res.status(401).json({ error: 'Invalid token' });
   }
 }
+
+// =======================
+// POST /api/orders
+// - luo uusi tilaus ilman authia
+// - event_id on pakollinen, jotta tilaus voidaan arkistoida tapahtumaan
+// =======================
+router.post('/', async (req, res) => {
+  const { name, organization, deliveryPoint, returnAt, items, eventId, specialRequirements } = req.body || {};
+
+  if (!name || !organization || !deliveryPoint || !returnAt) {
+    return res.status(400).json({ error: 'Pakollisia kenttiä puuttuu' });
+  }
+  if (!eventId) {
+    return res.status(400).json({ error: 'Tapahtuma on pakollinen' });
+  }
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Tilauksessa ei ole tuotteita' });
+  }
+
+  const parsedEventId = parseInt(eventId, 10);
+  if (!parsedEventId) {
+    return res.status(400).json({ error: 'Virheellinen tapahtuma' });
+  }
+
+  const normalizedItems = items.map((it) => ({
+    item_id: parseInt(it.item_id, 10),
+    quantity: parseInt(it.quantity, 10)
+  })).filter((it) => it.item_id && it.quantity > 0);
+
+  if (!normalizedItems.length) {
+    return res.status(400).json({ error: 'Tilauksessa ei ole tuotteita' });
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    const evRes = await client.query('SELECT id FROM events WHERE id = $1', [parsedEventId]);
+    if (!evRes.rows.length) {
+      throw new Error('Valittua tapahtumaa ei löytynyt');
+    }
+
+    const itemIds = Array.from(new Set(normalizedItems.map((it) => it.item_id)));
+    const itemsRes = await client.query(
+      'SELECT id, name, sku, available_stock FROM items WHERE id = ANY($1::int[]) FOR UPDATE',
+      [itemIds]
+    );
+    const rowsById = new Map(itemsRes.rows.map((r) => [r.id, r]));
+
+    for (const it of normalizedItems) {
+      const row = rowsById.get(it.item_id);
+      if (!row) throw new Error(`Tuotetta ei löydy (${it.item_id})`);
+      if (row.available_stock < it.quantity) {
+        throw new Error(`Varasto ei riitä tuotteelle ${row.name}`);
+      }
+    }
+
+    const selectedItemNames = normalizedItems
+      .map((it) => {
+        const row = rowsById.get(it.item_id);
+        return row ? row.name : null;
+      })
+      .filter(Boolean);
+
+    const requiredKeys = requiredRequirementKeysFromItems(selectedItemNames);
+    const cleanRequirements = sanitizeSpecialRequirements(specialRequirements);
+
+    for (const key of requiredKeys) {
+      if (!cleanRequirements[key]) {
+        if (key === 'power') throw new Error('Lisatieto pakollinen: Mita laitteita tulet laittamaan tahan?');
+        if (key === 'network') throw new Error('Lisatieto pakollinen: Kuinka monta konetta ja tarvitsetko wifia?');
+        if (key === 'lighting') throw new Error('Lisatieto pakollinen: Kuinka paljon valoa tarvitset ja minka varista?');
+      }
+    }
+
+    const requirementsValue = Object.keys(cleanRequirements).length ? cleanRequirements : null;
+
+    const orderRes = await client.query(
+      `INSERT INTO orders (
+        event_id,
+        customer_name,
+        organization,
+        delivery_point,
+        delivery_start,
+        return_at,
+        status,
+        special_requirements
+      ) VALUES ($1,$2,$3,$4,now(),$5,'placed',$6) RETURNING id`,
+      [parsedEventId, String(name).trim(), String(organization).trim(), String(deliveryPoint).trim(), returnAt, requirementsValue]
+    );
+
+    const orderId = orderRes.rows[0].id;
+    for (const it of normalizedItems) {
+      const row = rowsById.get(it.item_id);
+      await client.query(
+        `INSERT INTO order_items (order_id, item_id, item_name, sku, quantity)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [orderId, it.item_id, row.name, row.sku, it.quantity]
+      );
+      await client.query(
+        'UPDATE items SET available_stock = available_stock - $1, updated_at = now() WHERE id=$2',
+        [it.quantity, it.item_id]
+      );
+      await client.query(
+        'INSERT INTO stock_audit (item_id, order_id, delta, reason, actor) VALUES ($1,$2,$3,$4,$5)',
+        [it.item_id, orderId, -it.quantity, `Order ${orderId} created`, String(name).trim()]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.status(201).json({ orderId });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Order create error:', err);
+    res.status(400).json({ error: err.message || 'Tilauksen luonti epäonnistui' });
+  } finally {
+    client.release();
+  }
+});
 
 // =======================
 // GET /api/orders/:id

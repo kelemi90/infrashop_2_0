@@ -1,6 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'replace-me';
+
+function requireAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'No auth' });
+  const token = authHeader.split(' ')[1];
+  try {
+    const user = jwt.verify(token, JWT_SECRET);
+    if (user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    req.user = user;
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
 
 // Ensure archived tables exist (safe to run multiple times)
 (async () => {
@@ -51,6 +68,38 @@ router.get('/', async (req, res) => {
   res.json(r.rows);
 });
 
+// create event (admin)
+router.post('/', requireAdmin, async (req, res) => {
+  const { name, start_date, end_date } = req.body || {};
+
+  if (!name || !String(name).trim()) {
+    return res.status(400).json({ error: 'Event name is required' });
+  }
+
+  if (start_date && Number.isNaN(Date.parse(start_date))) {
+    return res.status(400).json({ error: 'Invalid start_date' });
+  }
+  if (end_date && Number.isNaN(Date.parse(end_date))) {
+    return res.status(400).json({ error: 'Invalid end_date' });
+  }
+  if (start_date && end_date && new Date(start_date) > new Date(end_date)) {
+    return res.status(400).json({ error: 'end_date must be after start_date' });
+  }
+
+  try {
+    const r = await db.query(
+      `INSERT INTO events (name, start_date, end_date)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [String(name).trim(), start_date || null, end_date || null]
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+});
+
 // grouped orders for event - items summed
 router.get('/:id/grouped-orders', async (req, res) => {
   const { id } = req.params;
@@ -69,7 +118,7 @@ router.get('/:id/grouped-orders', async (req, res) => {
 // return all items to stock for event (admin)
 router.post('/:id/return-to-stock', async (req, res) => {
   const { id } = req.params;
-  const client = await db.getClient();
+  const client = await db.connect();
   try {
     await client.query('BEGIN');
 

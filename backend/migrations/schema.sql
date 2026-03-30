@@ -66,6 +66,8 @@ CREATE TABLE IF NOT EXISTS orders (
 
   status TEXT NOT NULL DEFAULT 'placed', -- placed | delivered | returned | archived
 
+  special_requirements JSONB,
+
   pdf_path TEXT, -- polku PDF-tiedostoon
 
   created_at TIMESTAMP DEFAULT now(),
@@ -75,6 +77,9 @@ CREATE TABLE IF NOT EXISTS orders (
 -- Ensure event_id exists on already-created orders table
 ALTER TABLE orders
   ADD COLUMN IF NOT EXISTS event_id INT REFERENCES events(id);
+
+ALTER TABLE orders
+  ADD COLUMN IF NOT EXISTS special_requirements JSONB;
 
 -- ------------------------------
 -- order_items: tilauksen sisältämät tuotteet
