@@ -17,91 +17,25 @@ if [ "$EUID" -ne 0 ]; then
   die "This script must be run with sudo or as root. Re-run with sudo."
 fi
 
-# CLI flags: allow fully non-interactive provisioning
-NONINTERACTIVE=0
-DOMAIN="infrashop.vectorama.fi"
-ADMIN_EMAIL=""
-ADMIN_PASS=""
-DB_PASSWORD=""
-JWT_SECRET=""
-RESTORE_DUMP=0
-ASSUME_YES=0
+read -rp "Domain to configure (default: infrashop.vectorama.fi): " DOMAIN
+DOMAIN=${DOMAIN:-infrashop.vectorama.fi}
+read -rp "Admin email for certbot and notifications (default: admin@${DOMAIN}): " ADMIN_EMAIL
+ADMIN_EMAIL=${ADMIN_EMAIL:-admin@${DOMAIN}}
 
-usage() {
-  cat <<EOF
-Usage: $0 [options]
-
-Options:
-  --domain <domain>           Domain to configure (default: ${DOMAIN})
-  --admin-email <email>       Admin email for certbot (default: admin@<domain>)
-  --db-password <password>    Postgres password for infrashop user (generated if omitted)
-  --jwt-secret <secret>       JWT secret (generated if omitted)
-  --restore-dump              If present, will attempt to restore /srv/infrashop/db_backup.dump
-  --yes                       Assume yes to all prompts (non-interactive)
-  --non-interactive           Fully non-interactive (requires --domain and --admin-email)
-  -h, --help                  Show this help
-EOF
-  exit 1
-}
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --domain)
-      DOMAIN="$2"; shift 2;;
-    --admin-email)
-      ADMIN_EMAIL="$2"; shift 2;;
-    --admin-password)
-      ADMIN_PASS="$2"; shift 2;;
-    --db-password)
-      DB_PASSWORD="$2"; shift 2;;
-    --jwt-secret)
-      JWT_SECRET="$2"; shift 2;;
-    --restore-dump)
-      RESTORE_DUMP=1; shift;;
-    --yes)
-      ASSUME_YES=1; shift;;
-    --non-interactive)
-      NONINTERACTIVE=1; ASSUME_YES=1; shift;;
-    -h|--help)
-      usage;;
-    *)
-      die "Unknown option: $1";;
-  esac
-done
-
-# Derive defaults when not provided
-if [ -z "$ADMIN_EMAIL" ]; then
-  ADMIN_EMAIL="admin@${DOMAIN}"
-fi
-
-if [ $NONINTERACTIVE -eq 1 ]; then
-  # In non-interactive mode, require domain and admin email
-  if [ -z "$DOMAIN" ] || [ -z "$ADMIN_EMAIL" ]; then
-    die "--non-interactive requires --domain and --admin-email"
-  fi
-fi
-
-# Generate secrets if omitted
+read -rp "Postgres password for 'infrashop' DB user (leave empty to generate a random one): " DB_PASSWORD
 if [ -z "$DB_PASSWORD" ]; then
   DB_PASSWORD=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24)
   info "Generated DB password"
 fi
 
+read -rp "JWT secret (leave empty to generate a new one): " JWT_SECRET
 if [ -z "$JWT_SECRET" ]; then
   JWT_SECRET=$(head -c 32 /dev/urandom | base64)
   info "Generated JWT secret"
 fi
 
-# If not non-interactive and not assume-yes, prompt for restore option
-if [ $NONINTERACTIVE -eq 0 ] && [ $ASSUME_YES -eq 0 ]; then
-  read -rp "Do you want to restore a DB dump if present under $APP_DIR/db_backup.dump? [y/N]: " RESP
-  RESP=${RESP:-N}
-  if [[ "$RESP" =~ ^[Yy]$ ]]; then
-    RESTORE_DUMP=1
-  else
-    RESTORE_DUMP=0
-  fi
-fi
+read -rp "Do you want to restore a DB dump if present under /srv/infrashop/db_backup.dump? [y/N]: " RESTORE_DUMP
+RESTORE_DUMP=${RESTORE_DUMP:-N}
 
 apt_update() {
   info "Updating apt"
@@ -193,18 +127,6 @@ apply_schema_or_restore() {
 }
 
 create_admin_user() {
-  if [ $NONINTERACTIVE -eq 1 ] || [ $ASSUME_YES -eq 1 ]; then
-    info "Creating admin user non-interactively"
-    admin_email=${ADMIN_EMAIL:-admin@${DOMAIN}}
-    admin_pass=${ADMIN_PASS:-}
-    if [ -z "$admin_pass" ]; then
-      admin_pass=$(head -c 20 /dev/urandom | base64)
-      info "Generated admin password: $admin_pass"
-    fi
-    sudo -u infrashop bash -lc "cd $APP_DIR/backend && export DATABASE_URL=postgresql://infrashop:${DB_PASSWORD}@127.0.0.1:5432/infrashop && export ADMIN_EMAIL=${admin_email} ADMIN_PASSWORD='${admin_pass}' ADMIN_DISPLAY_NAME='Admin' && npm run create_admin"
-    return
-  fi
-
   read -rp "Create initial admin user now? [Y/n]: " create_admin
   create_admin=${create_admin:-Y}
   if [[ "$create_admin" =~ ^[Yy]$ ]]; then
