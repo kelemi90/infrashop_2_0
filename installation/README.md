@@ -2,6 +2,14 @@
 
 This guide walks through installing Infrashop to a clean Ubuntu/Debian server without Docker. It provides copy/pasteable commands and minimal explanation so you can run them from any machine (SSH into the target server first).
 
+Quick note: there is an automated, idempotent installer script at `installation/install-ubuntu.sh` in this repository that performs the same steps interactively. You can run that script instead of manually following this README:
+
+```bash
+sudo bash installation/install-ubuntu.sh
+```
+
+The rest of this README mirrors what the script does and is useful for auditing, manual installs, or customizing the steps.
+
 Before you begin
 - You control the server (SSH access) and can run sudo.
 - You own the DNS for the domain `infrashop.vectorama.fi` (or will point it to the server IP before obtaining TLS certs).
@@ -36,13 +44,14 @@ sudo apt install -y nodejs
 node -v && npm -v
 ```
 
-Step 3 — Install PostgreSQL 15
-(recommended: use PG repo for latest 15.x)
+Step 3 — Install PostgreSQL
+We recommend installing the latest stable PostgreSQL major release (PostgreSQL 18 as of 2026-03-30). Use the official PostgreSQL APT repo to get the newest supported packages.
+
 ```bash
 curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
 echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
 sudo apt update
-sudo apt install -y postgresql-15
+sudo apt install -y postgresql-18
 sudo systemctl enable --now postgresql
 ```
 
