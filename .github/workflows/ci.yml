@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  integration-smoke:
+    needs: frontend-build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: infrashop
+          POSTGRES_USER: infrashop
+          POSTGRES_PASSWORD: supersecret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U infrashop" --health-interval=5s --health-timeout=5s --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432 -U infrashop; do sleep 1; done
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Apply schema
+        working-directory: backend
+        env:
+          POSTGRES_USER: infrashop
+          POSTGRES_PASSWORD: supersecret
+          POSTGRES_DB: infrashop
+          DB_HOST: postgres
+        run: npm run migrate:apply
+      - name: Create admin user
+        working-directory: backend
+        env:
+          ADMIN_EMAIL: ci-admin@example.com
+          ADMIN_PASSWORD: ciPassw0rd!
+          ADMIN_DISPLAY_NAME: CI Admin
+          DATABASE_URL: postgresql://infrashop:supersecret@postgres:5432/infrashop
+        run: node scripts/create_admin.js
+      - name: Start backend
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://infrashop:supersecret@postgres:5432/infrashop
+          JWT_SECRET: test-secret-ci
+        run: |
+          nohup node server.js &
+          sleep 2
+      - name: Wait for health
+        run: |
+          until curl -sS http://localhost:3000/api/health | grep -q 'ok'; do sleep 1; done
+      - name: Smoke login
+        run: |
+          curl -s -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"email":"ci-admin@example.com","password":"ciPassw0rd!"}' | jq
