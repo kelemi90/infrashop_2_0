@@ -56,11 +56,14 @@ jobs:
           POSTGRES_DB: infrashop
           DB_HOST: localhost
         run: npm run migrate:apply
+      - name: Generate CI admin password
+        run: |
+          echo "CI_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> "$GITHUB_ENV"
       - name: Create admin user
         working-directory: backend
         env:
           ADMIN_EMAIL: ci-admin@example.com
-          ADMIN_PASSWORD: ciPassw0rd!
+          ADMIN_PASSWORD: ${{ env.CI_ADMIN_PASSWORD }}
           ADMIN_DISPLAY_NAME: CI Admin
           DATABASE_URL: postgresql://infrashop:supersecret@localhost:5432/infrashop
         run: node scripts/create_admin.js
@@ -77,4 +80,4 @@ jobs:
           until curl -sS http://localhost:3000/api/health | grep -q 'ok'; do sleep 1; done
       - name: Smoke login
         run: |
-          curl -s -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"email":"ci-admin@example.com","password":"ciPassw0rd!"}' | jq
+          curl -s -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d "{\"email\":\"ci-admin@example.com\",\"password\":\"${CI_ADMIN_PASSWORD}\"}" | jq
