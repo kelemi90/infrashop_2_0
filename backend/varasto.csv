@@ -7,7 +7,7 @@ Verkkokaapeli,952,verkko,5,,,,952
 verkko-1G Base-T,917,verkko,6,,,,917
 Tuoli,617,tuolit,7,Sininen muovituoli,Oulunhallin omat siniset muovituolit,,617
 RGB lediputki 201cm pyöreä,188,valot,8,,,,188
-Valkoiset muovipöydät,184,pöydät,9,180cm*74cm muovipöytä,,,184
+Valkoiset muovipöydät,152,pöydät,9,180cm*74cm muovipöytä,,,152
 TV virtakaapeli ja hdmi kaapeli,71,tv,10,,,,71
 info-tv,61,tv,11,,,,61
 Toimistohiiri,48,oheislaitteet,12,,,,48
@@ -17,7 +17,7 @@ Toimistotuolit,40,tuolit,15,,,,40
 360 led-360 led-yksipäinen-100,40,valot,16,,,,40
 360 led-360 led-kaksipäinen-50,39,valot,17,,,,39
 Yleisnäyttö,37,koneet,18,,,,37
-Vaneripöydät E,32,pöydät,19,272cm*60cm,,,32
+Vaneripöydät E,90,pöydät,19,272cm*60cm,,,90
 RGB wash pixel ohjattu,30,valot,20,,,,30
 Pelinäyttö,29,koneet,21,,,,29
 Ikeapöydät,28,pöydät,22,vain hätätapauksessa,,,28
@@ -26,7 +26,7 @@ RGB lediputki 201cm litteä,26,valot,23,,,,26
 PROVO Matto - Hiirimatto,25,oheislaitteet,25,,,,25
 "PROVO KUMU PRO - 7.1 tilaäänipelikuuloke",24,oheislaitteet,26,,,,24
 Trussit 3m trussi,24,trussit,27,,,,24
-Vaneripöydät C,23,pöydät,28,257cm*60cm,,,23
+Vaneripöydät C,60,pöydät,28,257cm*60cm,,,60
 360 led-360 led-yksipäinen-150,23,valot,29,,,,23
 2D kulma L,23,trussit,30,,,,23
 PROVO NOSTE PRO - hiiri,20,oheislaitteet,31,,,,20
@@ -42,12 +42,12 @@ Kuluttaja-tv,12,tv,40,,,,12
 TV Trussi-kiinnitys,12,tv,41,,,,12
 "Sähköt 3x16A 400V 9000W",12,sähköt,42,,,,12
 Trussit 4m trussi,12,trussit,43,,,,12
-Vaneripöydät B,10,pöydät,44,250cm*60cm,,,10
+Vaneripöydät B,57,pöydät,44,250cm*60cm,,,57
 Esperanza EG102 - peliohjain,10,oheislaitteet,45,,,,10
 Sähköt 1x16A 230V 3000W,10,sähköt,46,,,,10
 Standipaketti 6x8m,10,standipaketit,47,,,,10
 Loossi,10,standipaketit,48,,,,10
-Vaneripöydät G,9,pöydät,49,248cm*75cm,,,9
+Vaneripöydät G,121,pöydät,49,248cm*75cm,,,121
 Standipaketti 4x4m,9,standipaketit,50,,,,9
 Standipaketti 6x4m,8,standipaketit,51,,,,8
 "Päätylaatta (alutruss)",8,trussit,52,,,,8
@@ -55,7 +55,7 @@ Trussit 1m trussi,8,trussit,53,,,,8
 Sähköt Muu,7,sähköt,54,,,,7
 Spottivalot,7,valot,55,,,,7
 "Trussit 2,5m trussi",7,trussit,56,,,,7
-Vaneripöydät H,6,pöydät,57,248cm*75cm,,,6
+Vaneripöydät H,16,pöydät,57,248cm*75cm,,,16
 Sähköt 230V,6,sähköt,58,,,,6
 Pelikone,5,koneet,59,,,,5
 Induktioliesi,5,kodinkoneet,60,,,,5
@@ -75,7 +75,7 @@ Trussit 5m trussi,2,trussit,73,,,,2
 Arkkupakastin,1,kodinkoneet,74,,,,1
 Kiertoilmauuni,1,kodinkoneet,75,,,,1
 3D kulma,1,trussit,76,,,,1
-Vaneripöydät F-info,0,pöydät,77,193cm*60cm,Vain infon käytössä olevat pöydät. Etureunassa kaiteelle reiät,,0
+Vaneripöydät F-info,10,pöydät,77,193cm*60cm,Vain infon käytössä olevat pöydät. Etureunassa kaiteelle reiät,,10
 Sohva,0,tuolit,78,,,,0
 Säkkituoli,0,tuolit,79,Musta säkkituoli,,,0
 Lasiovinen jääkaappi,0,kodinkoneet,80,,,,0
@@ -92,3 +92,4 @@ Mikro,0,kodinkoneet,87,,,,0
 trussi paketti,0,trussit,91,,,,0
 "Trussit 1,5m trussi",0,trussit,92,,,,0
 Valkokangas,0,muut,93,,,,0
+Vaneripöydät Gk,24,pöydät,94,248cm*75cm, Etureunassa reikä kaiteelle,,,24
