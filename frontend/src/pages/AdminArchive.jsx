@@ -2,6 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
+function normalizeName(value) {
+  if (!value) return '';
+  try {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  } catch (e) {
+    return String(value).toLowerCase().trim();
+  }
+}
+
+function isTableItem(name) {
+  const n = normalizeName(name);
+  if (n.includes('vaneripoyd')) return true;
+  if (n.includes('valkoinen muovipoyta')) return true;
+  if (n.includes('valkoiset muovipoydat')) return true;
+  return false;
+}
+
 export default function AdminArchive() {
   const navigate = useNavigate();
   const userJson = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -20,6 +41,9 @@ export default function AdminArchive() {
   const [editingGroupItems, setEditingGroupItems] = useState([]);
   const [selectedAddItem, setSelectedAddItem] = useState('');
   const [selectedAddQty, setSelectedAddQty] = useState(1);
+
+  const tableItems = groupedItems.filter((item) => isTableItem(item.name));
+  const totalTables = tableItems.reduce((sum, item) => sum + Number(item.total_ordered || 0), 0);
 
   // hae kaikki tapahtumat
   useEffect(() => {
@@ -125,6 +149,24 @@ export default function AdminArchive() {
           {selectedEvent && !loading && (
             <>
               <h3>{selectedEvent.name}</h3>
+
+              <div style={{ marginBottom: 16, padding: 10, border: '1px solid #ddd', borderRadius: 6 }}>
+                <h4 style={{ marginTop: 0 }}>Poydat (yhteenveto)</h4>
+                {tableItems.length === 0 ? (
+                  <div>Ei tilattuja poytia tassa tapahtumassa.</div>
+                ) : (
+                  <>
+                    <ul style={{ marginTop: 0 }}>
+                      {tableItems.map((item) => (
+                        <li key={item.item_id}>
+                          {item.name}: {item.total_ordered}
+                        </li>
+                      ))}
+                    </ul>
+                    <div><strong>Poytia yhteensa: {totalTables}</strong></div>
+                  </>
+                )}
+              </div>
 
               <button
                 onClick={returnItemsToStock}

@@ -15,10 +15,19 @@ export default function ItemDetail() {
     }, [id]);
 
     if (!item) return <div>Loading...</div>;
+    const imageSrc = buildImageUrl(item && item.image_url);
+
     return (
         <div>
             <h2>{item.name}</h2>
-            {item.image_url && <img src={buildImageUrl(item.image_url)} alt={item.name} style={{ maxWidth: 480 }} />}
+            <img
+                src={imageSrc}
+                alt={item.name}
+                style={{ maxWidth: 480 }}
+                onError={(e) => {
+                    e.target.src = buildImageUrl(null);
+                }}
+            />
             <p>{item.long_description || item.short_description}</p>
             <div>Available: {item.available_stock}</div>
         </div>

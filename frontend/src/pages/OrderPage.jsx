@@ -2,10 +2,62 @@ import { useEffect, useState } from 'react';
 import api from '../api';
 import '../styles/order.css';
 
+const POWER_ITEMS = new Set([
+  'sahkot 1x16a 230v 3000w',
+  'sahkot 230v',
+  'sahkot 3x16a 400v 9000w',
+  'sahkot 3x32a 400v 15000w',
+  'sahkot muu'
+]);
+
+const NETWORK_ITEMS = new Set([
+  'verkko-10g lr',
+  'verkko-10g sr',
+  'verkko-1g base-t'
+]);
+
+const LIGHTING_ITEMS = new Set([
+  'valaistus',
+  'rgb wash pixel ohjattu'
+]);
+
+const REQUIREMENT_LABELS = {
+  power: 'Mita laitteita tulet laittamaan tahan?',
+  network: 'Kuinka monta konetta ja tarvitsetko wifia?',
+  lighting: 'Kuinka paljon valoa tarvitset ja minka varista?'
+};
+
+function normalizeItemName(value) {
+  if (!value) return '';
+  try {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  } catch (e) {
+    return String(value).toLowerCase().trim();
+  }
+}
+
+function requiredRequirementKeys(cartItems) {
+  const keys = new Set();
+  for (const item of cartItems) {
+    const nn = normalizeItemName(item.name);
+    if (POWER_ITEMS.has(nn)) keys.add('power');
+    if (NETWORK_ITEMS.has(nn)) keys.add('network');
+    if (LIGHTING_ITEMS.has(nn)) keys.add('lighting');
+  }
+  return Array.from(keys);
+}
+
 export default function OrderPage() {
   const [stepCompleted, setStepCompleted] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
   const [orderInfo, setOrderInfo] = useState({
+    eventId: '',
     name: '',
     organization: '',
     deliveryPoint: '',
@@ -14,9 +66,21 @@ export default function OrderPage() {
 
   const [items, setItems] = useState([]);
   const [cart, setCart] = useState({});
+  const [specialRequirements, setSpecialRequirements] = useState({
+    power: '',
+    network: '',
+    lighting: ''
+  });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [openCategory, setOpenCategory] = useState(null);
+
+  useEffect(() => {
+    api.get('/events')
+      .then((res) => setEvents(res.data || []))
+      .catch(() => setError('Tapahtumien haku epannistui'))
+      .finally(() => setEventsLoading(false));
+  }, []);
 
   useEffect(() => {
     if (stepCompleted) {
@@ -27,6 +91,7 @@ export default function OrderPage() {
   }, [stepCompleted]);
 
   const isFormValid =
+    orderInfo.eventId &&
     orderInfo.name &&
     orderInfo.organization &&
     orderInfo.deliveryPoint &&
@@ -50,20 +115,36 @@ export default function OrderPage() {
   };
 
   const submitOrder = async () => {
-    if (Object.keys(cart).length === 0) {
+    const selectedCartItems = Object.values(cart).filter(i => i.quantity > 0);
+
+    if (selectedCartItems.length === 0) {
       setError('Ostoskori on tyhjä');
       return;
     }
 
+    const requiredKeys = requiredRequirementKeys(selectedCartItems);
+    for (const key of requiredKeys) {
+      if (!specialRequirements[key] || !specialRequirements[key].trim()) {
+        setError(`Lisatieto puuttuu: ${REQUIREMENT_LABELS[key]}`);
+        return;
+      }
+    }
+
     const payload = {
+      eventId: Number(orderInfo.eventId),
       name: orderInfo.name,
       organization: orderInfo.organization,
       deliveryPoint: orderInfo.deliveryPoint,
       returnAt: orderInfo.returnDate,
-      items: Object.values(cart).map(i => ({
+      items: selectedCartItems.map(i => ({
         item_id: i.id,
         quantity: i.quantity
-      }))
+      })),
+      specialRequirements: {
+        power: specialRequirements.power,
+        network: specialRequirements.network,
+        lighting: specialRequirements.lighting
+      }
     };
 
     try {
@@ -72,7 +153,9 @@ export default function OrderPage() {
       setError('');
       setCart({});
       setStepCompleted(false);
+      setSpecialRequirements({ power: '', network: '', lighting: '' });
       setOrderInfo({
+        eventId: '',
         name: '',
         organization: '',
         deliveryPoint: '',
@@ -98,10 +181,15 @@ export default function OrderPage() {
     return acc;
   }, {});
 
+  const selectedCartItems = Object.values(cart).filter(i => i.quantity > 0);
+  const requiredKeys = requiredRequirementKeys(selectedCartItems);
+
   return (
     <div className="order-page">
       {!stepCompleted && (
         <OrderForm
+          events={events}
+          eventsLoading={eventsLoading}
           orderInfo={orderInfo}
           setOrderInfo={setOrderInfo}
           onContinue={() => setStepCompleted(true)}
@@ -127,6 +215,9 @@ export default function OrderPage() {
             <CartSidebar
               cart={cart}
               removeFromCart={removeFromCart}
+              requiredKeys={requiredKeys}
+              specialRequirements={specialRequirements}
+              setSpecialRequirements={setSpecialRequirements}
               onSubmit={submitOrder}
             />
           </div>
@@ -139,14 +230,41 @@ export default function OrderPage() {
 // =========================
 // Order Form (email poistettu)
 // =========================
-function OrderForm({ orderInfo, setOrderInfo, onContinue, isValid, error }) {
+function OrderForm({ events, eventsLoading, orderInfo, setOrderInfo, onContinue, isValid, error }) {
   const update = (field, value) =>
     setOrderInfo({ ...orderInfo, [field]: value });
+
+  const updateEvent = (value) => {
+    const selected = events.find((ev) => String(ev.id) === String(value));
+    const autoReturnDate = selected?.end_date ? String(selected.end_date).slice(0, 10) : '';
+
+    setOrderInfo({
+      ...orderInfo,
+      eventId: value,
+      returnDate: orderInfo.returnDate || autoReturnDate
+    });
+  };
 
   return (
     <div className="order-form">
       <h2>Tilaajan tiedot</h2>
       {error && <p className="error">{error}</p>}
+
+      <label>
+        Tapahtuma
+        <select
+          value={orderInfo.eventId}
+          onChange={(e) => updateEvent(e.target.value)}
+          disabled={eventsLoading}
+        >
+          <option value="">-- Valitse tapahtuma --</option>
+          {events.map((ev) => (
+            <option key={ev.id} value={ev.id}>
+              {ev.name}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <label>
         Tilaajan nimi
@@ -226,8 +344,15 @@ function ProductsSection({ groupedItems, cart, addToCart, openCategory, toggleAc
   );
 }
 
-function CartSidebar({ cart, removeFromCart, onSubmit }) {
+function CartSidebar({ cart, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, onSubmit }) {
   const items = Object.values(cart).filter(i => i.quantity > 0);
+
+  const updateRequirement = (key, value) => {
+    setSpecialRequirements((prev) => ({
+      ...prev,
+      [key]: value
+    }));
+  };
 
   return (
     <aside className="cart">
@@ -241,6 +366,23 @@ function CartSidebar({ cart, removeFromCart, onSubmit }) {
           <button onClick={() => removeFromCart(item.id)}>✕</button>
         </div>
       ))}
+
+      {requiredKeys.length > 0 && (
+        <div className="order-extra-info">
+          <h4>Lisatiedot</h4>
+          {requiredKeys.map((key) => (
+            <label key={key} className="order-extra-label">
+              {REQUIREMENT_LABELS[key]}
+              <textarea
+                value={specialRequirements[key] || ''}
+                onChange={(e) => updateRequirement(key, e.target.value)}
+                rows={3}
+                placeholder="Kirjoita lisatieto tahan"
+              />
+            </label>
+          ))}
+        </div>
+      )}
 
       {items.length > 0 && (
         <button className="submit-btn" onClick={onSubmit}>

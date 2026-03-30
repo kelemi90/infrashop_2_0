@@ -5,6 +5,81 @@ export default function HomePage() {
   const loggedIn = (typeof window !== 'undefined') && Boolean(localStorage.getItem('token'));
   let user = null;
   try { user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || 'null') : null; } catch (e) { user = null; }
+  const isAdmin = Boolean(user && user.role === 'admin');
+
+  const cards = [
+    {
+      key: 'items',
+      to: '/items',
+      title: 'Tuotteet',
+      description: 'Selaa laitteet ja tarvikkeet tuoteryhmittäin'
+    },
+    {
+      key: 'order',
+      to: '/order',
+      title: 'Tee tilaus',
+      description: 'Valitse tuotteet tai valmiit tuotepaketit'
+    },
+    {
+      key: 'orders',
+      to: '/orders',
+      title: 'Tilaukset',
+      description: 'Tehdyt tilaukset'
+    },
+    {
+      key: 'admin-groups',
+      to: '/admin',
+      title: 'Muokkaa tuoteryhmiä',
+      description: 'Muokkaa item-ryhmiä ja paketteja (Admin)',
+      adminOnly: true
+    },
+    {
+      key: 'admin-events',
+      to: '/admin/events',
+      title: 'Luo tapahtuma',
+      description: 'Luo uusi tapahtuma, johon tilaukset kohdistetaan (Admin)',
+      adminOnly: true
+    },
+    {
+      key: 'admin-images',
+      to: '/admin/items/images',
+      title: 'Kuvat',
+      description: 'Muokkaa tuotteiden kuvia ja URL-osoitteita (Admin)',
+      adminOnly: true
+    },
+    {
+      key: 'archive',
+      to: '/archive',
+      title: 'Arkisto',
+      description: 'Aiemmat tapahtumat ja tilaukset'
+    },
+    {
+      key: 'login',
+      to: '/login',
+      title: 'Kirjaudu',
+      description: 'Kirjaudu sisään ylläpito- ja muokkaustoimintoja varten',
+      loggedOutOnly: true
+    },
+    {
+      key: 'logout',
+      title: 'Kirjaudu ulos',
+      description: 'Kirjaudu ulos järjestelmästä',
+      adminOnly: true,
+      loggedInOnly: true,
+      onClick: () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload();
+      }
+    }
+  ];
+
+  const visibleCards = cards.filter((card) => {
+    if (card.adminOnly && !isAdmin) return false;
+    if (card.loggedOutOnly && loggedIn) return false;
+    if (card.loggedInOnly && !loggedIn) return false;
+    return true;
+  });
 
   return (
     <div className="home-page">
@@ -14,46 +89,23 @@ export default function HomePage() {
       </p>
 
       <div className="home-grid">
-        <Link to="/items" className="home-card">
-          <h2>Tuotteet</h2>
-          <p>Selaa laitteet ja tarvikkeet tuoteryhmittäin</p>
-        </Link>
+        {visibleCards.map((card) => {
+          if (card.to) {
+            return (
+              <Link key={card.key} to={card.to} className="home-card">
+                <h2>{card.title}</h2>
+                <p>{card.description}</p>
+              </Link>
+            );
+          }
 
-        <Link to="/order" className="home-card">
-          <h2>Tee tilaus</h2>
-          <p>Valitse tuotteet tai valmiit tuotepaketit</p>
-        </Link>
-
-        <Link to="/orders" className="home-card">
-          <h2>Tilaukset</h2>
-          <p>Tehdyt tilaukset</p>
-        </Link>
-
-        {user && user.role === 'admin' ? (
-          <Link to="/admin" className="home-card">
-            <h2>Muokkaa tuoteryhmiä</h2>
-            <p>Muokkaa item-ryhmiä ja paketteja (Admin)</p>
-          </Link>
-        ) : null}
-
-        <Link to="/archive" className="home-card">
-          <h2>Arkisto</h2>
-          <p>Aiemmat tapahtumat ja tilaukset</p>
-        </Link>
-
-        {!loggedIn && (
-          <Link to="/login" className="home-card">
-            <h2>Kirjaudu</h2>
-            <p>Kirjaudu sisään ylläpito- ja muokkaustoimintoja varten</p>
-          </Link>
-        )}
-
-        {loggedIn && user && user.role === 'admin' && (
-          <div className="home-card" style={{ cursor: 'pointer' }} onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.reload(); }}>
-            <h2>Kirjaudu ulos</h2>
-            <p>Kirjaudu ulos järjestelmästä</p>
-          </div>
-        )}
+          return (
+            <div key={card.key} className="home-card" style={{ cursor: 'pointer' }} onClick={card.onClick}>
+              <h2>{card.title}</h2>
+              <p>{card.description}</p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

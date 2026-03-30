@@ -11,6 +11,27 @@ const PRESETS = {
   Verkko: ["sähköt", "verkko", "Cables"]
 };
 
+function normalizeName(value) {
+  if (!value) return '';
+  try {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  } catch (e) {
+    return String(value).toLowerCase().trim();
+  }
+}
+
+function isTableItem(name) {
+  const n = normalizeName(name);
+  if (n.includes('vaneripoyd')) return true;
+  if (n.includes('valkoinen muovipoyta')) return true;
+  if (n.includes('valkoiset muovipoydat')) return true;
+  return false;
+}
+
 export default function ReportsPage() {
   const [data, setData] = useState([]);
   const [error, setError] = useState('');
@@ -38,6 +59,10 @@ export default function ReportsPage() {
     return acc;
   }, {});
 
+  const tableItems = data.filter((row) => isTableItem(row.name));
+  const totalTables = tableItems.reduce((sum, row) => sum + Number(row.total_quantity || 0), 0);
+  const showBuildTableSummary = activePreset === 'Build';
+
   return (
     <div className="reports-page">
       <h2>Tilausraportit</h2>
@@ -55,6 +80,35 @@ export default function ReportsPage() {
       </div>
 
       {error && <p className="error">{error}</p>}
+
+      {showBuildTableSummary && (
+        <div className="report-category">
+          <h3>Build - Poydat (yhteenveto)</h3>
+          {tableItems.length === 0 ? (
+            <p>Ei tilattuja poytia Build-raportissa.</p>
+          ) : (
+            <>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tuote</th>
+                    <th>Yhteensä tilattu</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableItems.map(i => (
+                    <tr key={`build-table-${i.name}`}>
+                      <td>{i.name}</td>
+                      <td>{i.total_quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p style={{ marginTop: 8, fontWeight: 600 }}>Poytia yhteensa: {totalTables}</p>
+            </>
+          )}
+        </div>
+      )}
 
       {Object.entries(grouped).map(([category, items]) => (
         <div key={category} className="report-category">

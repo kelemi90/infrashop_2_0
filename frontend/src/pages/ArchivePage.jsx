@@ -1,6 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
 
+function normalizeName(value) {
+  if (!value) return '';
+  try {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  } catch (e) {
+    return String(value).toLowerCase().trim();
+  }
+}
+
+function isTableItem(name) {
+  const n = normalizeName(name);
+  if (n.includes('vaneripoyd')) return true;
+  if (n.includes('valkoinen muovipoyta')) return true;
+  if (n.includes('valkoiset muovipoydat')) return true;
+  return false;
+}
+
 export default function ArchivePage() {
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -22,6 +43,9 @@ export default function ArchivePage() {
       .then(res => { setGroupedItems(res.data); setLoading(false); })
       .catch(err => { console.error(err); setLoading(false); });
   }, [selectedEvent]);
+
+  const tableItems = groupedItems.filter((item) => isTableItem(item.name));
+  const totalTables = tableItems.reduce((sum, item) => sum + Number(item.total_ordered || 0), 0);
 
   return (
     <div>
@@ -63,6 +87,25 @@ export default function ArchivePage() {
           {selectedEvent && !loading && (
             <>
               <h3>{selectedEvent.name}</h3>
+
+              <div style={{ marginBottom: 16, padding: 10, border: '1px solid #ddd', borderRadius: 6 }}>
+                <h4 style={{ marginTop: 0 }}>Poydat (yhteenveto)</h4>
+                {tableItems.length === 0 ? (
+                  <div>Ei tilattuja poytia tassa tapahtumassa.</div>
+                ) : (
+                  <>
+                    <ul style={{ marginTop: 0 }}>
+                      {tableItems.map((item) => (
+                        <li key={item.item_id}>
+                          {item.name}: {item.total_ordered}
+                        </li>
+                      ))}
+                    </ul>
+                    <div><strong>Poytia yhteensa: {totalTables}</strong></div>
+                  </>
+                )}
+              </div>
+
               {groupedItems.length === 0 ? (
                 <div>Ei aktiivisia tilauksia</div>
               ) : (

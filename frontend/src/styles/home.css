@@ -33,6 +33,7 @@
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   text-align: left;
+  color: #023dc7;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 

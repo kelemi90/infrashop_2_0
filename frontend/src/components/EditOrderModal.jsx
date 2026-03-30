@@ -9,6 +9,16 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
   const [availableItems, setAvailableItems] = useState([]);
   const [selectedAdd, setSelectedAdd] = useState('');
 
+  const parseRequirements = (value) => {
+    if (!value) return null;
+    if (typeof value === 'object') return value;
+    try {
+      return JSON.parse(value);
+    } catch (e) {
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (!orderId) return;
     // fetch order details (requires auth)
@@ -27,6 +37,8 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
   }, [orderId]);
 
   if (!orderId) return null;
+
+  const requirements = parseRequirements(order?.special_requirements);
 
   const updateQty = (index, q) => {
     const copy = [...items];
@@ -102,6 +114,15 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
             </div>
           )}
         </div>
+
+        {requirements && (
+          <div style={{ marginTop: 10, padding: 10, border: '1px solid #eee', borderRadius: 6, background: '#fafafa' }}>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>Lisatiedot tilaukseen</div>
+            {requirements.power && <div><strong>Sähköt:</strong> {requirements.power}</div>}
+            {requirements.network && <div><strong>Verkko:</strong> {requirements.network}</div>}
+            {requirements.lighting && <div><strong>Valaistus:</strong> {requirements.lighting}</div>}
+          </div>
+        )}
 
         <h4>Rivit</h4>
         <div style={{ marginBottom: 8 }}>

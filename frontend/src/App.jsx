@@ -16,6 +16,7 @@ import EditOrderPage from './pages/EditOrderPage';
 import LoginPage from './pages/LoginPage';
 import ReportsPage from './pages/ReportsPage';
 import Layout from './components/Layout';
+import AdminEvents from './pages/AdminEvents';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/archive" element={<ArchivePage />} />
         <Route path="/admin" element={<RequireAdmin><AdminGroups /></RequireAdmin>} />
+        <Route path="/admin/events" element={<RequireAdmin><AdminEvents /></RequireAdmin>} />
         <Route path="/admin/archive" element={<RequireAdmin><Admin /></RequireAdmin>} />
         <Route path="/admin/items/images" element={<RequireAdmin><ItemImageEdit /></RequireAdmin>} />
         <Route path="/admin/items/new" element={<RequireAdmin><NewItem /></RequireAdmin>} />
