@@ -12,6 +12,8 @@ backend/node_modules/
 .env
 .env.local
 .env.*.local
+# Backup env files created by rotation script
+.env.*.bak
 
 # Logs
 npm-debug.log*
