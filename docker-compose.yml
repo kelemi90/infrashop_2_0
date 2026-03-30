@@ -43,7 +43,10 @@ services:
       - "443:443"
     volumes:
       - ./nginx/infrashop.conf:/etc/nginx/conf.d/default.conf:ro
-      # - ./certs:etc/nginx/certs:ro # myöhemmin SSL
+      # mount Let's Encrypt certs from the host (certbot will write here)
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # optional webroot used by certbot for http-01 challenges
+      - ./nginx/html:/var/www/html:ro
     depends_on:
       - frontend
       - backend
