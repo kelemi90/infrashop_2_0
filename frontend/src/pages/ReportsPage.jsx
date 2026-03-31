@@ -34,6 +34,7 @@ function isTableItem(name) {
 
 export default function ReportsPage() {
   const [data, setData] = useState([]);
+  const [groupData, setGroupData] = useState([]);
   const [error, setError] = useState('');
   const [activePreset, setActivePreset] = useState(null);
 
@@ -50,6 +51,16 @@ export default function ReportsPage() {
       setData(res.data);
     } catch {
       setError('Raportin haku epäonnistui');
+    }
+  };
+
+  const loadGroupReport = async () => {
+    try {
+      setError('');
+      const res = await api.post('/reports/groups', {});
+      setGroupData(res.data || []);
+    } catch (e) {
+      setError('Group report fetch failed');
     }
   };
 
@@ -132,6 +143,31 @@ export default function ReportsPage() {
           </table>
         </div>
       ))}
+
+      <div style={{ marginTop: 24 }}>
+        <h3>Group reports</h3>
+        <button onClick={loadGroupReport}>Load group report</button>
+        {groupData.length > 0 && (
+          <table style={{ marginTop: 8 }}>
+            <thead>
+              <tr>
+                <th>Group</th>
+                <th>Times ordered</th>
+                <th>Total items from groups</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groupData.map(g => (
+                <tr key={`group-r-${g.group_id}`}>
+                  <td>{g.group_name} ({g.group_id})</td>
+                  <td>{g.times_ordered}</td>
+                  <td>{g.total_items_from_groups}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       {data.length === 0 && activePreset && (
         <p>Ei tilauksia valituille kategorioille</p>

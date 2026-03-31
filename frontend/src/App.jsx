@@ -17,6 +17,7 @@ import LoginPage from './pages/LoginPage';
 import ReportsPage from './pages/ReportsPage';
 import Layout from './components/Layout';
 import AdminEvents from './pages/AdminEvents';
+import GroupsPage from './pages/GroupsPage';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/items/:id" element={<ItemDetail />} />
         <Route path="/order" element={<OrderPage />} />
+  <Route path="/groups" element={<GroupsPage />} />
         <Route path="/orders" element={<OrdersPage />} />
         {/* <Route path="/orders/:id/edit" element={<EditOrderPage />} /> */}
         <Route path="/reports" element={<ReportsPage />} />
