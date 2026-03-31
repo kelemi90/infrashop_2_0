@@ -31,7 +31,7 @@ export default function ArchivePage() {
   // fetch events
   useEffect(() => {
     api.get('/events')
-      .then(res => setEvents(res.data))
+      .then(res => setEvents((res.data || []).filter((ev) => (ev.name || '').trim().toLowerCase() !== 'vectorama lan 2025')))
       .catch(err => console.error(err));
   }, []);
 
@@ -43,9 +43,6 @@ export default function ArchivePage() {
       .then(res => { setGroupedItems(res.data); setLoading(false); })
       .catch(err => { console.error(err); setLoading(false); });
   }, [selectedEvent]);
-
-  const tableItems = groupedItems.filter((item) => isTableItem(item.name));
-  const totalTables = tableItems.reduce((sum, item) => sum + Number(item.total_ordered || 0), 0);
 
   return (
     <div>
@@ -87,24 +84,6 @@ export default function ArchivePage() {
           {selectedEvent && !loading && (
             <>
               <h3>{selectedEvent.name}</h3>
-
-              <div style={{ marginBottom: 16, padding: 10, border: '1px solid #ddd', borderRadius: 6 }}>
-                <h4 style={{ marginTop: 0 }}>Poydat (yhteenveto)</h4>
-                {tableItems.length === 0 ? (
-                  <div>Ei tilattuja poytia tassa tapahtumassa.</div>
-                ) : (
-                  <>
-                    <ul style={{ marginTop: 0 }}>
-                      {tableItems.map((item) => (
-                        <li key={item.item_id}>
-                          {item.name}: {item.total_ordered}
-                        </li>
-                      ))}
-                    </ul>
-                    <div><strong>Poytia yhteensa: {totalTables}</strong></div>
-                  </>
-                )}
-              </div>
 
               {groupedItems.length === 0 ? (
                 <div>Ei aktiivisia tilauksia</div>
