@@ -48,7 +48,7 @@ export default function AdminArchive() {
   // hae kaikki tapahtumat
   useEffect(() => {
     api.get('/events')
-      .then(res => setEvents(res.data))
+      .then(res => setEvents((res.data || []).filter((ev) => (ev.name || '').trim().toLowerCase() !== 'vectorama lan 2025')))
       .catch(err => console.error(err));
     // fetch item groups and all items for admin operations
     api.get('/item-groups').then(r => setItemGroups(r.data)).catch(() => {});
@@ -149,24 +149,6 @@ export default function AdminArchive() {
           {selectedEvent && !loading && (
             <>
               <h3>{selectedEvent.name}</h3>
-
-              <div style={{ marginBottom: 16, padding: 10, border: '1px solid #ddd', borderRadius: 6 }}>
-                <h4 style={{ marginTop: 0 }}>Poydat (yhteenveto)</h4>
-                {tableItems.length === 0 ? (
-                  <div>Ei tilattuja poytia tassa tapahtumassa.</div>
-                ) : (
-                  <>
-                    <ul style={{ marginTop: 0 }}>
-                      {tableItems.map((item) => (
-                        <li key={item.item_id}>
-                          {item.name}: {item.total_ordered}
-                        </li>
-                      ))}
-                    </ul>
-                    <div><strong>Poytia yhteensa: {totalTables}</strong></div>
-                  </>
-                )}
-              </div>
 
               <button
                 onClick={returnItemsToStock}

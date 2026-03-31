@@ -61,6 +61,26 @@ export default function AdminGroups() {
                       setEditingGroupItems(r.data.map(it => ({ item_id: it.item_id, quantity: it.quantity, name: it.name })));
                     } catch (err) { console.error(err); }
                   }}>Inline edit</button>
+                  <button
+                    style={{ background: '#b91c1c', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: 4, cursor: 'pointer' }}
+                    onClick={async () => {
+                      const ok = window.confirm(`Poistetaanko tuoteryhma \"${g.name}\"?`);
+                      if (!ok) return;
+                      try {
+                        await api.delete(`/item-groups/${g.id}`);
+                        setItemGroups(prev => prev.filter(x => x.id !== g.id));
+                        if (editingGroupId === g.id) {
+                          setEditingGroupId(null);
+                          setEditingGroupItems([]);
+                        }
+                      } catch (err) {
+                        console.error(err);
+                        alert(err.response?.data?.error || 'Delete failed');
+                      }
+                    }}
+                  >
+                    Remove
+                  </button>
                 </div>
               </li>
             ))}

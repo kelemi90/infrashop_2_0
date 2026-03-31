@@ -3,6 +3,14 @@ import React, { useState } from 'react';
 export default function GroupEditor({ value = [], onChange, allItems = [], onSave, onClose, saving=false }) {
   const [selectedAddItem, setSelectedAddItem] = useState('');
   const [selectedAddQty, setSelectedAddQty] = useState(1);
+  const [itemSearch, setItemSearch] = useState('');
+
+  const searchTerm = itemSearch.trim().toLowerCase();
+  const filteredItems = allItems.filter((ai) => {
+    if (!searchTerm) return true;
+    return (ai.name || '').toLowerCase().includes(searchTerm);
+  });
+  const selectedItem = allItems.find((ai) => String(ai.id) === String(selectedAddItem));
 
   const addSelected = () => {
     if (!selectedAddItem) return;
@@ -31,15 +39,35 @@ export default function GroupEditor({ value = [], onChange, allItems = [], onSav
   return (
     <div>
       <div style={{ marginBottom: 8 }}>
-        <select value={selectedAddItem} onChange={e => setSelectedAddItem(e.target.value)}>
-          <option value="">-- Valitse tuote --</option>
-          {allItems.map(ai => (
-            <option key={ai.id} value={ai.id}>{ai.name} (var: {ai.available_stock})</option>
-          ))}
-        </select>
+        <input
+          type="text"
+          placeholder="Hae tuotetta nimellä"
+          value={itemSearch}
+          onChange={(e) => setItemSearch(e.target.value)}
+          style={{ width: '100%', marginBottom: 8 }}
+        />
+
+        <div style={{ marginBottom: 8, display: 'inline-block', width: 'fit-content', maxWidth: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, background: '#f8fafc', color: '#111827' }}>
+          {selectedItem ? `Valittu tuote: ${selectedItem.name}` : 'Valittu tuote: ei valittu'}
+        </div>
         <input type="number" min="1" value={selectedAddQty} onChange={e => setSelectedAddQty(Number(e.target.value))} style={{ width:80, marginLeft:8 }} />
         <button style={{ marginLeft:8 }} onClick={addSelected}>Add</button>
         {onClose && <button style={{ marginLeft:8 }} onClick={onClose}>Close</button>}
+      </div>
+
+      <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 6, padding: 6, marginBottom: 10 }}>
+        {filteredItems.map((ai) => (
+          <div key={ai.id} style={{ marginBottom: 6 }}>
+            <button
+              type="button"
+              onClick={() => setSelectedAddItem(String(ai.id))}
+              style={{ width: '100%', textAlign: 'left' }}
+            >
+              {ai.name} (var: {ai.available_stock})
+            </button>
+          </div>
+        ))}
+        {filteredItems.length === 0 && <div>Ei hakutuloksia</div>}
       </div>
 
       <div>
