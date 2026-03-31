@@ -57,7 +57,7 @@ const upload = multer({
 router.get('/', async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, sku, name, short_description, image_url, thumbnail_url, available_stock, category FROM items ORDER BY name'
+      'SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url, available_stock, category FROM items ORDER BY name'
     );
     res.json(result.rows);
   } catch (err) {
@@ -72,7 +72,7 @@ router.get('/:id', async (req, res) => {
     const itemId = req.params.id;
 
     const result = await db.query(
-      'SELECT id, sku, name, short_description, image_url, thumbnail_url, available_stock, category FROM items WHERE id = $1',
+      'SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url, available_stock, category FROM items WHERE id = $1',
       [itemId]
     );
 
