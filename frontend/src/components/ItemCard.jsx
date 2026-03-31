@@ -5,7 +5,7 @@ export default function ItemCard({ item, onClick }) {
   const imageSrc = buildImageUrl(item && item.image_url);
 
   return (
-    <div className="item-card" onClick={onClick}>
+    <div className="item-card">
       <div className="item-image">
         <img
           src={imageSrc}
@@ -30,8 +30,8 @@ export default function ItemCard({ item, onClick }) {
           <button
             className="item-link"
             onClick={(e) => {
-              e.stopPropagation(); // estää tuplaklikin
-              onClick();
+              e.stopPropagation();
+              onClick && onClick();
             }}
           >
             Näytä

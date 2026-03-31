@@ -67,6 +67,17 @@ function sanitizeSpecialRequirements(input) {
   }
 })();
 
+// Ensure order_items has group columns for bundle support
+(async () => {
+  try {
+    // add nullable group_id and group_parent_id if missing; keep FK-less for compatibility
+    await db.query('ALTER TABLE order_items ADD COLUMN IF NOT EXISTS group_id INT');
+    await db.query('ALTER TABLE order_items ADD COLUMN IF NOT EXISTS group_parent_id INT');
+  } catch (err) {
+    console.error('Failed to ensure order_items group columns:', err);
+  }
+})();
+
 // =======================
 // Auth middleware (vain ryhmien lisäykseen / tilauksen hakuun)
 function auth(req, res, next) {
@@ -104,12 +115,27 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Virheellinen tapahtuma' });
   }
 
-  const normalizedItems = items.map((it) => ({
-    item_id: parseInt(it.item_id, 10),
-    quantity: parseInt(it.quantity, 10)
-  })).filter((it) => it.item_id && it.quantity > 0);
+  // Support both plain items and group bundles in the payload.
+  // items may contain either { item_id, quantity } or { group_id, multiplier }
+  const plainItems = [];
+  const groupLines = [];
+  for (const it of items) {
+    if (it && (it.group_id !== undefined && it.group_id !== null)) {
+      const gid = parseInt(it.group_id, 10);
+      const mult = parseInt(it.multiplier, 10) || 1;
+      if (!gid || mult <= 0) {
+        return res.status(400).json({ error: 'Virheellinen group_id tai multiplier' });
+      }
+      groupLines.push({ group_id: gid, multiplier: mult });
+    } else if (it && (it.item_id !== undefined && it.item_id !== null)) {
+      const iid = parseInt(it.item_id, 10);
+      const qty = parseInt(it.quantity, 10) || 0;
+      if (!iid || qty <= 0) continue; // ignore zeros
+      plainItems.push({ item_id: iid, quantity: qty });
+    }
+  }
 
-  if (!normalizedItems.length) {
+  if (!plainItems.length && !groupLines.length) {
     return res.status(400).json({ error: 'Tilauksessa ei ole tuotteita' });
   }
 
@@ -121,28 +147,66 @@ router.post('/', async (req, res) => {
     if (!evRes.rows.length) {
       throw new Error('Valittua tapahtumaa ei löytynyt');
     }
+    // Build required quantities per concrete item by combining plain items and group bundles
+    const plainIds = Array.from(new Set(plainItems.map(it => it.item_id)));
+    const groupIds = Array.from(new Set(groupLines.map(g => g.group_id)));
 
-    const itemIds = Array.from(new Set(normalizedItems.map((it) => it.item_id)));
+    // fetch group membership (no FOR UPDATE here yet; we'll lock affected items below)
+    let groupMembers = [];
+    if (groupIds.length) {
+      const gmRes = await client.query(
+        'SELECT igi.group_id, igi.item_id, igi.quantity FROM item_group_items igi WHERE igi.group_id = ANY($1::int[])',
+        [groupIds]
+      );
+      groupMembers = gmRes.rows;
+      // ensure groups exist
+      const foundGroupIds = new Set(groupMembers.map(r => r.group_id));
+      for (const g of groupIds) {
+        if (!foundGroupIds.has(g)) {
+          // there might be an empty group (no members) but we should still verify group exists
+          const gRes = await client.query('SELECT id FROM item_groups WHERE id=$1', [g]);
+          if (!gRes.rows.length) throw new Error(`Group not found: ${g}`);
+        }
+      }
+    }
+
+    // accumulate required quantities per item
+    const requiredMap = new Map();
+    for (const it of plainItems) {
+      requiredMap.set(it.item_id, (requiredMap.get(it.item_id) || 0) + it.quantity);
+    }
+    const groupMultiplierById = new Map(groupLines.map(g => [g.group_id, g.multiplier]));
+    for (const m of groupMembers) {
+      const mult = groupMultiplierById.get(m.group_id) || 1;
+      requiredMap.set(m.item_id, (requiredMap.get(m.item_id) || 0) + (m.quantity * mult));
+    }
+
+    const affectedIds = Array.from(new Set([...requiredMap.keys()]));
+    if (!affectedIds.length && !plainIds.length) {
+      throw new Error('Tilauksessa ei ole kelvollisia tuotteita');
+    }
+
+    // lock affected items for update
     const itemsRes = await client.query(
       'SELECT id, name, sku, available_stock FROM items WHERE id = ANY($1::int[]) FOR UPDATE',
-      [itemIds]
+      [affectedIds]
     );
     const rowsById = new Map(itemsRes.rows.map((r) => [r.id, r]));
 
-    for (const it of normalizedItems) {
-      const row = rowsById.get(it.item_id);
-      if (!row) throw new Error(`Tuotetta ei löydy (${it.item_id})`);
-      if (row.available_stock < it.quantity) {
+    // validate availability
+    for (const [iid, reqQty] of requiredMap.entries()) {
+      const row = rowsById.get(iid);
+      if (!row) throw new Error(`Tuotetta ei löydy (${iid})`);
+      if (row.available_stock < reqQty) {
         throw new Error(`Varasto ei riitä tuotteelle ${row.name}`);
       }
     }
 
-    const selectedItemNames = normalizedItems
-      .map((it) => {
-        const row = rowsById.get(it.item_id);
-        return row ? row.name : null;
-      })
-      .filter(Boolean);
+    // build selected item names for special requirements detection
+    const selectedItemNames = Array.from(new Set(Array.from(requiredMap.keys()).map(iid => {
+      const r = rowsById.get(iid);
+      return r ? r.name : null;
+    }).filter(Boolean)));
 
     const requiredKeys = requiredRequirementKeysFromItems(selectedItemNames);
     const cleanRequirements = sanitizeSpecialRequirements(specialRequirements);
@@ -172,11 +236,14 @@ router.post('/', async (req, res) => {
     );
 
     const orderId = orderRes.rows[0].id;
-    for (const it of normalizedItems) {
+
+    const actor = String(name).trim();
+
+    // insert plain items (if any)
+    for (const it of plainItems) {
       const row = rowsById.get(it.item_id);
       await client.query(
-        `INSERT INTO order_items (order_id, item_id, item_name, sku, quantity)
-         VALUES ($1,$2,$3,$4,$5)`,
+        `INSERT INTO order_items (order_id, item_id, item_name, sku, quantity) VALUES ($1,$2,$3,$4,$5)`,
         [orderId, it.item_id, row.name, row.sku, it.quantity]
       );
       await client.query(
@@ -185,8 +252,38 @@ router.post('/', async (req, res) => {
       );
       await client.query(
         'INSERT INTO stock_audit (item_id, order_id, delta, reason, actor) VALUES ($1,$2,$3,$4,$5)',
-        [it.item_id, orderId, -it.quantity, `Order ${orderId} created`, String(name).trim()]
+        [it.item_id, orderId, -it.quantity, `Order ${orderId} created`, actor]
       );
+    }
+
+    // insert groups (create header + exploded child lines)
+    if (groupLines.length) {
+      const groupIds = Array.from(new Set(groupLines.map(g => g.group_id)));
+      const groupsRes = await client.query('SELECT id, name FROM item_groups WHERE id = ANY($1::int[])', [groupIds]);
+      const groupById = new Map(groupsRes.rows.map(r => [r.id, r]));
+
+      for (const gl of groupLines) {
+        const g = groupById.get(gl.group_id);
+        const groupName = g ? g.name : `Group ${gl.group_id}`;
+        const headerRes = await client.query(
+          `INSERT INTO order_items (order_id, item_id, item_name, sku, quantity, group_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+          [orderId, null, groupName, null, gl.multiplier, gl.group_id]
+        );
+        const headerId = headerRes.rows[0].id;
+
+        const members = groupMembers.filter(m => m.group_id === gl.group_id);
+        for (const m of members) {
+          const qty = m.quantity * gl.multiplier;
+          const itemRow = rowsById.get(m.item_id);
+          await client.query(
+            `INSERT INTO order_items (order_id, item_id, item_name, sku, quantity, group_parent_id, group_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            [orderId, m.item_id, itemRow ? itemRow.name : null, itemRow ? itemRow.sku : null, qty, headerId, gl.group_id]
+          );
+          await client.query('UPDATE items SET available_stock = available_stock - $1, updated_at = now() WHERE id=$2', [qty, m.item_id]);
+          await client.query('INSERT INTO stock_audit (item_id, order_id, delta, reason, actor) VALUES ($1,$2,$3,$4,$5)', [m.item_id, orderId, -qty, `Group ${gl.group_id} (order ${orderId})`, actor]);
+        }
+      }
     }
 
     await client.query('COMMIT');
@@ -251,8 +348,9 @@ router.get('/:id', async (req, res) => {
   const itemsRes = await db.query(
     `SELECT oi.*, i.name, i.sku, i.image_url, i.short_description
      FROM order_items oi
-     JOIN items i ON i.id = oi.item_id
-     WHERE oi.order_id=$1`,
+     LEFT JOIN items i ON i.id = oi.item_id
+     WHERE oi.order_id=$1
+     ORDER BY oi.id`,
     [id]
   );
 

@@ -41,3 +41,29 @@ router.post('/summary', async (req, res) => {
 
 
 module.exports = router;
+
+// ------------------------------
+// Group-level reporting
+// ------------------------------
+router.post('/groups', async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT
+        g.id AS group_id,
+        g.name AS group_name,
+        COUNT(oi_header.id)::int AS times_ordered,
+        COALESCE(SUM(child.quantity),0)::int AS total_items_from_groups
+      FROM item_groups g
+      LEFT JOIN order_items oi_header ON oi_header.group_id = g.id AND oi_header.group_parent_id IS NULL
+      LEFT JOIN order_items child ON child.group_parent_id = oi_header.id
+      GROUP BY g.id, g.name
+      ORDER BY times_ordered DESC, g.name
+      `
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('REPORT GROUPS ERROR', err);
+    res.status(500).json({ error: 'Group report failed' });
+  }
+});

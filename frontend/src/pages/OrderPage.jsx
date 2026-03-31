@@ -66,6 +66,7 @@ export default function OrderPage() {
 
   const [items, setItems] = useState([]);
   const [cart, setCart] = useState({});
+  const [cartGroups, setCartGroups] = useState({});
   const [specialRequirements, setSpecialRequirements] = useState({
     power: '',
     network: '',
@@ -90,6 +91,25 @@ export default function OrderPage() {
     }
   }, [stepCompleted]);
 
+  // If page opened with ?group_id=...&multiplier=... add the group to the cartGroups
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const gid = params.get('group_id');
+      const mult = parseInt(params.get('multiplier'), 10) || 1;
+      if (gid) {
+        addGroupToCart(gid, mult);
+        // remove query params from URL to avoid duplicate adds
+        const url = new URL(window.location.href);
+        url.searchParams.delete('group_id');
+        url.searchParams.delete('multiplier');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   const isFormValid =
     orderInfo.eventId &&
     orderInfo.name &&
@@ -108,6 +128,11 @@ export default function OrderPage() {
     }));
   };
 
+  // add a group bundle to the cart (group_id -> multiplier)
+  const addGroupToCart = (groupId, multiplier = 1) => {
+    setCartGroups(prev => ({ ...prev, [groupId]: (prev[groupId] || 0) + multiplier }));
+  };
+
   const removeFromCart = (itemId) => {
     const copy = { ...cart };
     delete copy[itemId];
@@ -116,8 +141,9 @@ export default function OrderPage() {
 
   const submitOrder = async () => {
     const selectedCartItems = Object.values(cart).filter(i => i.quantity > 0);
+    const selectedCartGroups = Object.entries(cartGroups).filter(([,mult]) => mult > 0);
 
-    if (selectedCartItems.length === 0) {
+    if (selectedCartItems.length === 0 && selectedCartGroups.length === 0) {
       setError('Ostoskori on tyhjä');
       return;
     }
@@ -136,10 +162,10 @@ export default function OrderPage() {
       organization: orderInfo.organization,
       deliveryPoint: orderInfo.deliveryPoint,
       returnAt: orderInfo.returnDate,
-      items: selectedCartItems.map(i => ({
-        item_id: i.id,
-        quantity: i.quantity
-      })),
+      items: [
+        ...selectedCartGroups.map(([group_id, multiplier]) => ({ group_id: Number(group_id), multiplier })),
+        ...selectedCartItems.map(i => ({ item_id: i.id, quantity: i.quantity }))
+      ],
       specialRequirements: {
         power: specialRequirements.power,
         network: specialRequirements.network,
@@ -151,7 +177,8 @@ export default function OrderPage() {
       const res = await api.post('/orders', payload); // ei auth headeria
       setSuccess(`Tilaus lähetetty! Tilaus ID: ${res.data.orderId}`);
       setError('');
-      setCart({});
+  setCart({});
+  setCartGroups({});
       setStepCompleted(false);
       setSpecialRequirements({ power: '', network: '', lighting: '' });
       setOrderInfo({
@@ -214,6 +241,8 @@ export default function OrderPage() {
 
             <CartSidebar
               cart={cart}
+              cartGroups={cartGroups}
+              setCartGroups={setCartGroups}
               removeFromCart={removeFromCart}
               requiredKeys={requiredKeys}
               specialRequirements={specialRequirements}
@@ -344,8 +373,9 @@ function ProductsSection({ groupedItems, cart, addToCart, openCategory, toggleAc
   );
 }
 
-function CartSidebar({ cart, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, onSubmit }) {
+function CartSidebar({ cart, cartGroups, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, onSubmit }) {
   const items = Object.values(cart).filter(i => i.quantity > 0);
+  const groups = Object.entries(cartGroups || {}).map(([gid, mult]) => ({ group_id: gid, multiplier: mult }));
 
   const updateRequirement = (key, value) => {
     setSpecialRequirements((prev) => ({
@@ -357,7 +387,19 @@ function CartSidebar({ cart, removeFromCart, requiredKeys, specialRequirements, 
   return (
     <aside className="cart">
       <h3>Ostoskori</h3>
-      {items.length === 0 && <p>Ei tuotteita</p>}
+      {items.length === 0 && groups.length === 0 && <p>Ei tuotteita</p>}
+
+      {groups.map(g => (
+        <div key={`group-${g.group_id}`} className="cart-item group-item">
+          <span>Group {g.group_id}</span>
+          <span>x {g.multiplier}</span>
+          <button onClick={() => {
+            const copy = { ...cartGroups };
+            delete copy[g.group_id];
+            setCartGroups(copy);
+          }}>✕</button>
+        </div>
+      ))}
 
       {items.map(item => (
         <div key={item.id} className="cart-item">
