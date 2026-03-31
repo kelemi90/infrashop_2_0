@@ -19,7 +19,7 @@ function isTableItem(name) {
   const n = normalizeName(name);
   if (n.includes('vaneripoyd')) return true;
   if (n.includes('valkoinen muovipoyta')) return true;
-  if (n.includes('valkoiset muovipoydat')) return true;
+  if (n.includes('valkoiset muovipöydät')) return true;
   return false;
 }
 

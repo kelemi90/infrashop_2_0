@@ -40,7 +40,7 @@ export default function AdminEvents() {
       return;
     }
     if (form.start_date && form.end_date && form.start_date > form.end_date) {
-      setError('Paattymispaiva ei voi olla ennen aloituspaivaa');
+      setError('Päättymispäivä ei voi olla ennen aloituspäiväa');
       return;
     }
 
@@ -81,7 +81,7 @@ export default function AdminEvents() {
         </label>
 
         <label>
-          Aloituspaiva
+          Aloituspäivä
           <input
             type="date"
             value={form.start_date}
@@ -90,7 +90,7 @@ export default function AdminEvents() {
         </label>
 
         <label>
-          Paattymispaiva
+          Päättymispäivä
           <input
             type="date"
             value={form.end_date}
@@ -114,7 +114,7 @@ export default function AdminEvents() {
             <tr>
               <th align="left">Nimi</th>
               <th align="left">Aloitus</th>
-              <th align="left">Paattyminen</th>
+              <th align="left">Päättyminen</th>
             </tr>
           </thead>
           <tbody>

@@ -28,7 +28,7 @@ function isTableItem(name) {
   const n = normalizeName(name);
   if (n.includes('vaneripoyd')) return true;
   if (n.includes('valkoinen muovipoyta')) return true;
-  if (n.includes('valkoiset muovipoydat')) return true;
+  if (n.includes('valkoiset muovipöydät')) return true;
   return false;
 }
 
@@ -94,7 +94,7 @@ export default function ReportsPage() {
 
       {showBuildTableSummary && (
         <div className="report-category">
-          <h3>Build - Poydat (yhteenveto)</h3>
+          <h3>Build - pöydät (yhteenveto)</h3>
           {tableItems.length === 0 ? (
             <p>Ei tilattuja poytia Build-raportissa.</p>
           ) : (
