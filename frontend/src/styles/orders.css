@@ -79,3 +79,11 @@
 .orders-actions button:hover {
   background: #2563eb;
 }
+
+.orders-actions .danger-btn {
+  background: #b91c1c;
+}
+
+.orders-actions .danger-btn:hover {
+  background: #991b1b;
+}

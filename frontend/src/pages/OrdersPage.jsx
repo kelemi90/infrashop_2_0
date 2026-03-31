@@ -8,11 +8,32 @@ export default function OrdersPage(){
     const [error, setError] = useState('');
     const [editingOrder, setEditingOrder] = useState(null);
 
-    useEffect(() => {
+    const userJson = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    let user = null;
+    try { user = userJson ? JSON.parse(userJson) : null; } catch (e) { user = null; }
+    const isAdmin = Boolean(user && user.role === 'admin');
+
+    const loadOrders = () => {
         api.get('/orders')
             .then(res => setOrders(res.data))
             .catch(() => setError('Tilauksien haku epäonnistui'));
+    };
+
+    useEffect(() => {
+        loadOrders();
     }, []);
+
+    const deleteOrder = async (orderId) => {
+        const ok = window.confirm(`Poistetaanko tilaus #${orderId}? Varasto palautetaan.`);
+        if (!ok) return;
+
+        try {
+            await api.delete(`/orders/${orderId}`);
+            setOrders(prev => prev.filter(o => o.id !== orderId));
+        } catch (e) {
+            setError(e?.response?.data?.error || 'Tilauksen poisto epäonnistui');
+        }
+    };
 
     return (
         <div className="orders-page">
@@ -47,13 +68,18 @@ export default function OrdersPage(){
                                     Lataa PDF
                                 </a>
                                 <button onClick={() => setEditingOrder(o.id)}>Muokkaa tilausta</button>
+                                                                {isAdmin && (
+                                                                    <button className="danger-btn" onClick={() => deleteOrder(o.id)}>
+                                                                        Poista
+                                                                    </button>
+                                                                )}
                             </td>
                         </tr>
                     ))}
                 </tbody>
             </table>
             {editingOrder && (
-              <EditOrderModal orderId={editingOrder} onClose={() => setEditingOrder(null)} onSaved={({order, items}) => { setEditingOrder(null); api.get('/orders').then(r=>setOrders(r.data)); }} />
+                            <EditOrderModal orderId={editingOrder} onClose={() => setEditingOrder(null)} onSaved={() => { setEditingOrder(null); loadOrders(); }} />
             )}
         </div>
     );

@@ -32,6 +32,19 @@ function isTableItem(name) {
   return false;
 }
 
+function sortByDeliveryPointThenName(a, b) {
+  const byDeliveryPoint = String(a.delivery_point || '').localeCompare(
+    String(b.delivery_point || ''),
+    'fi',
+    { sensitivity: 'base' }
+  );
+  if (byDeliveryPoint !== 0) return byDeliveryPoint;
+
+  return String(a.name || '').localeCompare(String(b.name || ''), 'fi', {
+    sensitivity: 'base'
+  });
+}
+
 export default function ReportsPage() {
   const [data, setData] = useState([]);
   const [groupData, setGroupData] = useState([]);
@@ -71,6 +84,7 @@ export default function ReportsPage() {
   }, {});
 
   const tableItems = data.filter((row) => isTableItem(row.name));
+  const sortedTableItems = [...tableItems].sort(sortByDeliveryPointThenName);
   const totalTables = tableItems.reduce((sum, row) => sum + Number(row.total_quantity || 0), 0);
   const showBuildTableSummary = activePreset === 'Build';
 
@@ -108,10 +122,10 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {tableItems.map((i, idx) => (
+                  {sortedTableItems.map((i, idx) => (
                     <tr key={`build-table-${i.name}-${i.delivery_point}-${idx}`}>
                       <td>{i.name}</td>
-                      <td>{i.delivery_point || '—'}</td>
+                      <td>{i.delivery_point}</td>
                       <td>{i.total_quantity}</td>
                     </tr>
                   ))}
@@ -136,10 +150,10 @@ export default function ReportsPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((i, idx) => (
+              {[...items].sort(sortByDeliveryPointThenName).map((i, idx) => (
                 <tr key={`${i.name}-${i.delivery_point}-${idx}`}>
                   <td>{i.name}</td>
-                  <td>{i.delivery_point || '—'}</td>
+                  <td>{i.delivery_point}</td>
                   <td>{i.total_quantity}</td>
                 </tr>
               ))}
