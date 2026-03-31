@@ -21,7 +21,7 @@ router.post('/summary', async (req, res) => {
       SELECT
         i.name,
         i.category,
-        o.delivery_point,
+        COALESCE(NULLIF(BTRIM(o.delivery_point), ''), 'Ei määritetty') AS delivery_point,
         SUM(oi.quantity)::int AS total_quantity
       FROM order_items oi
       JOIN items i ON i.id = oi.item_id

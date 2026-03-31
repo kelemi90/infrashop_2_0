@@ -92,6 +92,15 @@ function auth(req, res, next) {
   }
 }
 
+function requireAdmin(req, res, next) {
+  auth(req, res, () => {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin only' });
+    }
+    next();
+  });
+}
+
 // =======================
 // POST /api/orders
 // - luo uusi tilaus ilman authia
@@ -616,6 +625,61 @@ router.get('/', async (req, res) => {
   }
 });
 
+// DELETE /api/orders/:id
+// Admin only: returns order quantities back to stock and removes the order.
+router.delete('/:id', requireAdmin, async (req, res) => {
+  const orderId = parseInt(req.params.id, 10);
+  if (!orderId) {
+    return res.status(400).json({ error: 'Virheellinen tilaus-id' });
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    const orderRes = await client.query('SELECT id FROM orders WHERE id = $1 FOR UPDATE', [orderId]);
+    if (!orderRes.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Tilausta ei löydy' });
+    }
+
+    const qtyRes = await client.query(
+      `SELECT item_id, SUM(quantity)::int AS quantity
+       FROM order_items
+       WHERE order_id = $1 AND item_id IS NOT NULL
+       GROUP BY item_id`,
+      [orderId]
+    );
+
+    const actor = req.user ? (req.user.id || req.user.email || 'admin') : 'admin';
+
+    for (const row of qtyRes.rows) {
+      await client.query(
+        'UPDATE items SET available_stock = available_stock + $1, updated_at = now() WHERE id = $2',
+        [row.quantity, row.item_id]
+      );
+      await client.query(
+        'INSERT INTO stock_audit (item_id, order_id, delta, reason, actor) VALUES ($1, NULL, $2, $3, $4)',
+        [row.item_id, row.quantity, `Order ${orderId} deleted, stock returned`, actor]
+      );
+    }
+
+    // Remove older audit rows referencing the soon-to-be deleted order to satisfy FK.
+    await client.query('DELETE FROM stock_audit WHERE order_id = $1', [orderId]);
+
+    await client.query('DELETE FROM orders WHERE id = $1', [orderId]);
+
+    await client.query('COMMIT');
+    return res.json({ success: true, orderId, restoredItems: qtyRes.rows.length });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Order delete error:', err);
+    return res.status(500).json({ error: 'Tilauksen poisto epäonnistui' });
+  } finally {
+    client.release();
+  }
+});
+
 const PDFDocument = require('pdfkit');
 
 // GET /api/orders/:id/pdf
@@ -673,18 +737,17 @@ const PDFDocument = require('pdfkit');
       doc.fontSize(14).text('Tuotteet');
       doc.moveDown(0.5);
 
-      // Table layout
+      // Table layout: [Tuote (SKU)] [Määrä]
       const tableLeft = 50;
       const pageWidth = doc.page.width - tableLeft - 50;
-      const colWidths = [pageWidth * 0.6, pageWidth * 0.2, pageWidth * 0.2];
+      const colWidths = [pageWidth * 0.8, pageWidth * 0.2];
       const rowHeight = 22;
-      const headers = ['Tuote', 'SKU', 'Määrä'];
+      const headers = ['Tuote', 'Määrä'];
 
       // Draw a single row (borders + text)
       function drawRow(y, cells, isHeader) {
         let x = tableLeft;
         cells.forEach((text, i) => {
-          doc.rect(x, y, colWidths[i], rowHeight).stroke();
           if (isHeader) {
             doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1f2933', '#1f2933');
             doc.fillColor('#ffffff').fontSize(10).font('Helvetica-Bold')
@@ -703,7 +766,7 @@ const PDFDocument = require('pdfkit');
       drawRow(tableY, headers, true);
       tableY += rowHeight;
 
-      items.forEach((it, idx) => {
+      items.forEach((it) => {
         // new page if needed
         if (tableY + rowHeight > doc.page.height - 60) {
           doc.addPage();
@@ -711,16 +774,39 @@ const PDFDocument = require('pdfkit');
           drawRow(tableY, headers, true);
           tableY += rowHeight;
         }
-        drawRow(tableY, [
-          it.item_name || 'Tuntematon',
-          it.sku || '-',
-          it.quantity
-        ], false);
+        const nameCell = `${it.item_name || 'Tuntematon'} (${it.sku || '-'})`;
+        const qtyCell = `x ${it.quantity}`;
+        drawRow(tableY, [nameCell, qtyCell], false);
         tableY += rowHeight;
       });
 
       // move cursor below table
-      doc.y = tableY + 8;
+      doc.y = tableY + 12;
+
+      // Special requirements / open answers
+      const sr = order.special_requirements;
+      const REQUIREMENT_LABELS = {
+        power: 'Mitä laitteita tulet laittamaan tähän?',
+        network: 'Kuinka monta konetta ja tarvitsetko wifiä?',
+        lighting: 'Kuinka paljon valoa tarvitset ja minkä väristä?'
+      };
+      if (sr && typeof sr === 'object') {
+        const entries = Object.entries(REQUIREMENT_LABELS)
+          .filter(([key]) => sr[key] && String(sr[key]).trim());
+        if (entries.length > 0) {
+          // new page if not enough room
+          if (doc.y + entries.length * 40 + 30 > doc.page.height - 60) {
+            doc.addPage();
+          }
+          doc.fontSize(14).font('Helvetica-Bold').fillColor('#000000').text('Lisätiedot');
+          doc.moveDown(0.3);
+          entries.forEach(([key, label]) => {
+            doc.fontSize(10).font('Helvetica-Bold').text(label);
+            doc.fontSize(10).font('Helvetica').text(String(sr[key]).trim());
+            doc.moveDown(0.5);
+          });
+        }
+      }
 
       doc.end();
 
