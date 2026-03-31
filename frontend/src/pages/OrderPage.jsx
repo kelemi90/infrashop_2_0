@@ -51,6 +51,13 @@ function requiredRequirementKeys(cartItems) {
   return Array.from(keys);
 }
 
+function selectedGroupRequirementItems(cartGroups, groupItemsById) {
+  const selectedGroups = Object.entries(cartGroups || {}).filter(([, mult]) => mult > 0);
+  return selectedGroups.flatMap(([gid]) =>
+    ((groupItemsById && groupItemsById[gid]) || []).map((it) => ({ name: it.name }))
+  );
+}
+
 export default function OrderPage() {
   const [stepCompleted, setStepCompleted] = useState(false);
   const [events, setEvents] = useState([]);
@@ -65,6 +72,8 @@ export default function OrderPage() {
   });
 
   const [items, setItems] = useState([]);
+  const [itemGroups, setItemGroups] = useState([]);
+  const [groupItemsById, setGroupItemsById] = useState({});
   const [cart, setCart] = useState({});
   const [cartGroups, setCartGroups] = useState({});
   const [specialRequirements, setSpecialRequirements] = useState({
@@ -88,8 +97,41 @@ export default function OrderPage() {
       api.get('/items')
         .then(res => setItems(res.data))
         .catch(() => setError('Tuotteiden haku epäonnistui'));
+
+      api.get('/item-groups')
+        .then(res => setItemGroups(res.data || []))
+        .catch(() => setError('Tuoteryhmien haku epäonnistui'));
     }
   }, [stepCompleted]);
+
+  // Load group contents for groups that are currently in cart.
+  useEffect(() => {
+    const groupIds = Object.keys(cartGroups || {}).filter((gid) => (cartGroups[gid] || 0) > 0);
+    const missing = groupIds.filter((gid) => !groupItemsById[gid]);
+    if (missing.length === 0) return;
+
+    let cancelled = false;
+    Promise.all(
+      missing.map((gid) =>
+        api.get(`/item-groups/${gid}/items`)
+          .then((res) => [gid, res.data || []])
+          .catch(() => [gid, []])
+      )
+    ).then((entries) => {
+      if (cancelled) return;
+      setGroupItemsById((prev) => {
+        const next = { ...prev };
+        entries.forEach(([gid, rows]) => {
+          next[gid] = rows;
+        });
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cartGroups, groupItemsById]);
 
   // If page opened with ?group_id=...&multiplier=... add the group to the cartGroups
   useEffect(() => {
@@ -148,7 +190,32 @@ export default function OrderPage() {
       return;
     }
 
-    const requiredKeys = requiredRequirementKeys(selectedCartItems);
+    let effectiveGroupItems = selectedGroupRequirementItems(cartGroups, groupItemsById);
+
+    // Ensure requirement checks are accurate even if group contents are not yet loaded.
+    const missingGroupIds = selectedCartGroups
+      .map(([gid]) => String(gid))
+      .filter((gid) => !groupItemsById[gid]);
+
+    if (missingGroupIds.length > 0) {
+      const fetchedEntries = await Promise.all(
+        missingGroupIds.map((gid) =>
+          api.get(`/item-groups/${gid}/items`)
+            .then((res) => [gid, res.data || []])
+            .catch(() => [gid, []])
+        )
+      );
+
+      const fetchedMap = {};
+      fetchedEntries.forEach(([gid, rows]) => {
+        fetchedMap[gid] = rows;
+      });
+
+      setGroupItemsById((prev) => ({ ...prev, ...fetchedMap }));
+      effectiveGroupItems = [...effectiveGroupItems, ...fetchedEntries.flatMap(([, rows]) => rows.map((it) => ({ name: it.name })))];
+    }
+
+    const requiredKeys = requiredRequirementKeys([...selectedCartItems, ...effectiveGroupItems]);
     for (const key of requiredKeys) {
       if (!specialRequirements[key] || !specialRequirements[key].trim()) {
         setError(`Lisatieto puuttuu: ${REQUIREMENT_LABELS[key]}`);
@@ -209,7 +276,8 @@ export default function OrderPage() {
   }, {});
 
   const selectedCartItems = Object.values(cart).filter(i => i.quantity > 0);
-  const requiredKeys = requiredRequirementKeys(selectedCartItems);
+  const selectedGroupItems = selectedGroupRequirementItems(cartGroups, groupItemsById);
+  const requiredKeys = requiredRequirementKeys([...selectedCartItems, ...selectedGroupItems]);
 
   return (
     <div className="order-page">
@@ -233,6 +301,8 @@ export default function OrderPage() {
           <div className="order-layout">
             <ProductsSection
               groupedItems={groupedItems}
+              itemGroups={itemGroups}
+              addGroupToCart={addGroupToCart}
               cart={cart}
               addToCart={addToCart}
               openCategory={openCategory}
@@ -242,6 +312,8 @@ export default function OrderPage() {
             <CartSidebar
               cart={cart}
               cartGroups={cartGroups}
+              itemGroups={itemGroups}
+              groupItemsById={groupItemsById}
               setCartGroups={setCartGroups}
               removeFromCart={removeFromCart}
               requiredKeys={requiredKeys}
@@ -330,10 +402,33 @@ function OrderForm({ events, eventsLoading, orderInfo, setOrderInfo, onContinue,
 // =========================
 // Products Section ja CartSidebar pysyvät ennallaan
 // =========================
-function ProductsSection({ groupedItems, cart, addToCart, openCategory, toggleAccordion }) {
+function ProductsSection({ groupedItems, itemGroups, addGroupToCart, cart, addToCart, openCategory, toggleAccordion }) {
   return (
     <div className="products">
       <h2>Valitse tuotteet</h2>
+
+      {itemGroups.length > 0 && (
+        <div className="category-section">
+          <button className="accordion-toggle" onClick={() => toggleAccordion('__GROUPS__')}>
+            Tuoteryhmat {openCategory === '__GROUPS__' ? '▼' : '▶'}
+          </button>
+
+          {openCategory === '__GROUPS__' && (
+            <div className="category-items">
+              {itemGroups.map((group) => (
+                <div key={group.id} className="product-row">
+                  <div>
+                    <strong>{group.name}</strong>
+                    <div className="muted">{group.description || 'Ei kuvausta'}</div>
+                  </div>
+                  <button onClick={() => addGroupToCart(group.id, 1)}>Lisää</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {Object.entries(groupedItems).map(([category, items]) => (
         <div key={category} className="category-section">
           <button className="accordion-toggle" onClick={() => toggleAccordion(category)}>
@@ -373,9 +468,13 @@ function ProductsSection({ groupedItems, cart, addToCart, openCategory, toggleAc
   );
 }
 
-function CartSidebar({ cart, cartGroups, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, onSubmit }) {
+function CartSidebar({ cart, cartGroups, itemGroups, groupItemsById, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, onSubmit }) {
   const items = Object.values(cart).filter(i => i.quantity > 0);
-  const groups = Object.entries(cartGroups || {}).map(([gid, mult]) => ({ group_id: gid, multiplier: mult }));
+  const groups = Object.entries(cartGroups || {}).map(([gid, mult]) => {
+    const found = (itemGroups || []).find((g) => String(g.id) === String(gid));
+    const includedItems = (groupItemsById && groupItemsById[gid]) || [];
+    return { group_id: gid, multiplier: mult, name: found ? found.name : `Group ${gid}`, includedItems };
+  });
 
   const updateRequirement = (key, value) => {
     setSpecialRequirements((prev) => ({
@@ -390,14 +489,21 @@ function CartSidebar({ cart, cartGroups, setCartGroups, removeFromCart, required
       {items.length === 0 && groups.length === 0 && <p>Ei tuotteita</p>}
 
       {groups.map(g => (
-        <div key={`group-${g.group_id}`} className="cart-item group-item">
-          <span>Group {g.group_id}</span>
-          <span>x {g.multiplier}</span>
-          <button onClick={() => {
-            const copy = { ...cartGroups };
-            delete copy[g.group_id];
-            setCartGroups(copy);
-          }}>✕</button>
+        <div key={`group-${g.group_id}`} className="cart-item group-item" style={{ display: 'block' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <span>{g.name}</span>
+            <span>x {g.multiplier}</span>
+            <button onClick={() => {
+              const copy = { ...cartGroups };
+              delete copy[g.group_id];
+              setCartGroups(copy);
+            }}>✕</button>
+          </div>
+          {g.includedItems.length > 0 && (
+            <div className="muted" style={{ marginTop: 4 }}>
+              Sisaltaa: {g.includedItems.map((it) => `${it.name} x${it.quantity}`).join(', ')}
+            </div>
+          )}
         </div>
       ))}
 
@@ -426,7 +532,7 @@ function CartSidebar({ cart, cartGroups, setCartGroups, removeFromCart, required
         </div>
       )}
 
-      {items.length > 0 && (
+      {(items.length > 0 || groups.length > 0) && (
         <button className="submit-btn" onClick={onSubmit}>
           Lähetä tilaus
         </button>

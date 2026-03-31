@@ -85,4 +85,20 @@ router.post('/:id/items', auth, async (req, res) => {
   }
 });
 
+// Delete an item group (admin only)
+router.delete('/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Ei oikeuksia' });
+  const groupId = parseInt(req.params.id, 10);
+  if (!groupId) return res.status(400).json({ error: 'Invalid group id' });
+
+  try {
+    const r = await db.query('DELETE FROM item_groups WHERE id = $1 RETURNING id', [groupId]);
+    if (!r.rows.length) return res.status(404).json({ error: 'Group not found' });
+    res.json({ ok: true, id: groupId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete group' });
+  }
+});
+
 module.exports = router;
