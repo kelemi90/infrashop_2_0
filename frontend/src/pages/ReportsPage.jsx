@@ -103,13 +103,15 @@ export default function ReportsPage() {
                 <thead>
                   <tr>
                     <th>Tuote</th>
+                    <th>Toimituspiste</th>
                     <th>Yhteensä tilattu</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {tableItems.map(i => (
-                    <tr key={`build-table-${i.name}`}>
+                  {tableItems.map((i, idx) => (
+                    <tr key={`build-table-${i.name}-${i.delivery_point}-${idx}`}>
                       <td>{i.name}</td>
+                      <td>{i.delivery_point || '—'}</td>
                       <td>{i.total_quantity}</td>
                     </tr>
                   ))}
@@ -129,13 +131,15 @@ export default function ReportsPage() {
             <thead>
               <tr>
                 <th>Tuote</th>
+                <th>Toimituspiste</th>
                 <th>Yhteensä tilattu</th>
               </tr>
             </thead>
             <tbody>
-              {items.map(i => (
-                <tr key={i.name}>
+              {items.map((i, idx) => (
+                <tr key={`${i.name}-${i.delivery_point}-${idx}`}>
                   <td>{i.name}</td>
+                  <td>{i.delivery_point || '—'}</td>
                   <td>{i.total_quantity}</td>
                 </tr>
               ))}

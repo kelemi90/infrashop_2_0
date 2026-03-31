@@ -21,13 +21,14 @@ router.post('/summary', async (req, res) => {
       SELECT
         i.name,
         i.category,
+        o.delivery_point,
         SUM(oi.quantity)::int AS total_quantity
       FROM order_items oi
       JOIN items i ON i.id = oi.item_id
       JOIN orders o ON o.id = oi.order_id
       WHERE LOWER(i.category) = ANY($1)
-      GROUP BY i.name, i.category
-      ORDER BY i.category, i.name
+      GROUP BY i.name, i.category, o.delivery_point
+      ORDER BY i.category, i.name, o.delivery_point
       `,
       [categories]
     );

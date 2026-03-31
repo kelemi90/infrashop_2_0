@@ -673,11 +673,54 @@ const PDFDocument = require('pdfkit');
       doc.fontSize(14).text('Tuotteet');
       doc.moveDown(0.5);
 
-      items.forEach(it => {
-        doc.text(
-          `${it.quantity} x ${it.item_name || 'Tuntematon'} (${it.sku || '-'})`
-        );
+      // Table layout
+      const tableLeft = 50;
+      const pageWidth = doc.page.width - tableLeft - 50;
+      const colWidths = [pageWidth * 0.6, pageWidth * 0.2, pageWidth * 0.2];
+      const rowHeight = 22;
+      const headers = ['Tuote', 'SKU', 'Määrä'];
+
+      // Draw a single row (borders + text)
+      function drawRow(y, cells, isHeader) {
+        let x = tableLeft;
+        cells.forEach((text, i) => {
+          doc.rect(x, y, colWidths[i], rowHeight).stroke();
+          if (isHeader) {
+            doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1f2933', '#1f2933');
+            doc.fillColor('#ffffff').fontSize(10).font('Helvetica-Bold')
+              .text(String(text), x + 4, y + 6, { width: colWidths[i] - 8, lineBreak: false });
+            doc.fillColor('#000000').font('Helvetica');
+          } else {
+            doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#ffffff', '#888888');
+            doc.fillColor('#000000').fontSize(10).font('Helvetica')
+              .text(String(text), x + 4, y + 6, { width: colWidths[i] - 8, lineBreak: false });
+          }
+          x += colWidths[i];
+        });
+      }
+
+      let tableY = doc.y;
+      drawRow(tableY, headers, true);
+      tableY += rowHeight;
+
+      items.forEach((it, idx) => {
+        // new page if needed
+        if (tableY + rowHeight > doc.page.height - 60) {
+          doc.addPage();
+          tableY = 50;
+          drawRow(tableY, headers, true);
+          tableY += rowHeight;
+        }
+        drawRow(tableY, [
+          it.item_name || 'Tuntematon',
+          it.sku || '-',
+          it.quantity
+        ], false);
+        tableY += rowHeight;
       });
+
+      // move cursor below table
+      doc.y = tableY + 8;
 
       doc.end();
 

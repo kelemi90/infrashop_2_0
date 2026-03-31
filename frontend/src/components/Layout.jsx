@@ -48,7 +48,7 @@ export default function Layout() {
               <>
                 <NavLink to="/admin" className="nav-multiline">
                   <span>Muokkaa</span>
-                  <span className="muted">tuotepaketia</span>
+                  <span className="muted">tuotepakettia</span>
                 </NavLink>
                 <NavLink to="/admin/events" className="admin-btn">Tapahtumat</NavLink>
                 <NavLink to="/admin/items/images" className="admin-btn">Kuvat</NavLink>

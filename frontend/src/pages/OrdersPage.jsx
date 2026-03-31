@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
 import EditOrderModal from '../components/EditOrderModal';
+import '../styles/orders.css';
 
 export default function OrdersPage(){
     const [orders, setOrders] = useState([]);
@@ -19,8 +20,8 @@ export default function OrdersPage(){
 
             {error && <p className="error">{error}</p>}
 
-            <table>
-                <thread>
+            <table className="orders-table">
+                <thead>
                     <tr>
                         <th>ID</th>
                         <th>Tilaaja</th>
@@ -28,11 +29,11 @@ export default function OrdersPage(){
                         <th>Toimituspiste</th>
                         <th>Palautus</th>
                         <th>Status</th>
-                        <th>PDF</th>
+                        <th>Toiminnot</th>
                     </tr>
-                </thread>
+                </thead>
 
-                <body>
+                <tbody>
                     {orders.map(o => (
                         <tr key={o.id}>
                             <td>{o.id}</td>
@@ -41,15 +42,15 @@ export default function OrdersPage(){
                             <td>{o.delivery_point}</td>
                             <td>{o.return_at?.slice(0,10)}</td>
                             <td>{o.status}</td>
-                            <td>
-                                                                                                <a href={`/api/orders/${o.id}/pdf`} target="_blank" rel="noopener noreferrer">
-                                                                                                    Lataa PDF
-                                                                                                </a>
-                                                                                                <button style={{ marginLeft: 8 }} onClick={() => setEditingOrder(o.id)}>Muokkaa tilausta</button>
+                            <td className="orders-actions">
+                                <a href={`/api/orders/${o.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                                    Lataa PDF
+                                </a>
+                                <button onClick={() => setEditingOrder(o.id)}>Muokkaa tilausta</button>
                             </td>
                         </tr>
                     ))}
-                </body>
+                </tbody>
             </table>
             {editingOrder && (
               <EditOrderModal orderId={editingOrder} onClose={() => setEditingOrder(null)} onSaved={({order, items}) => { setEditingOrder(null); api.get('/orders').then(r=>setOrders(r.data)); }} />
