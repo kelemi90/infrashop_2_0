@@ -25,7 +25,12 @@ export default function ItemDetail() {
                 alt={item.name}
                 style={{ maxWidth: 480 }}
                 onError={(e) => {
-                    e.target.src = buildImageUrl(null);
+                    if (!e.target.dataset.fallback) {
+                        e.target.dataset.fallback = '1';
+                        e.target.src = buildImageUrl(null);
+                    } else {
+                        e.target.style.display = 'none';
+                    }
                 }}
             />
             <p>{item.long_description || item.short_description}</p>

@@ -57,7 +57,9 @@
 }
 
 .modal-card img {
-  max-width: 100%;
+  width: 454px;
+  height: 454px;
+  object-fit: contain;
   margin: 12px 0;
 }
 

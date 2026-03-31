@@ -125,6 +125,30 @@
 .admin-left ul.item-list { list-style:none; padding:0; margin:0; }
 .admin-left ul.item-list li { padding:6px 0; border-bottom: 1px solid #f2f4f6; }
 
+/* Mobile: stack vertically, left panel becomes a compact scrollable strip */
+@media (max-width: 640px) {
+  .admin-split {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+  .admin-left {
+    min-width: unset;
+    max-width: unset;
+    width: 100%;
+    height: auto;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 0;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+  }
+  .admin-right {
+    height: auto;
+    overflow: visible;
+  }
+}
+
 /* edit box styling used in ItemImageEdit */
 .edit-box { margin-top:10px; padding:12px; border:1px solid #eee; border-radius:6px; background:#fff; }
 .edit-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:10px; flex-wrap:wrap; }

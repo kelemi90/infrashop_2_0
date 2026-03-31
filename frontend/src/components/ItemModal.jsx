@@ -15,7 +15,12 @@ export default function ItemModal({ item, onClose }) {
                     src={imageSrc}
                     alt={item.name}
                     onError={(e) => {
-                        e.target.src = buildImageUrl(null);
+                        if (!e.target.dataset.fallback) {
+                            e.target.dataset.fallback = '1';
+                            e.target.src = buildImageUrl(null);
+                        } else {
+                            e.target.style.display = 'none';
+                        }
                     }}
                 />
 
