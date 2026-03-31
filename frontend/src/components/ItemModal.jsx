@@ -19,7 +19,13 @@ export default function ItemModal({ item, onClose }) {
                     }}
                 />
 
-                <p>{item.long_description || item.short_description}</p>
+                                <p className="item-short">{item.short_description}</p>
+                                {item.long_description && (
+                                    <div className="item-long">
+                                        <h4>Lisätiedot</h4>
+                                        <p>{item.long_description}</p>
+                                    </div>
+                                )}
 
                 <div className="stock">Varastossa: {item.available_stock}</div>
             </div>
