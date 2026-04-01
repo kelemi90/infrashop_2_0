@@ -25,6 +25,19 @@ CREATE TABLE IF NOT EXISTS items (
   updated_at TIMESTAMP DEFAULT now()
 );
 
+-- ------------------------------
+-- item_images: tuotteen kuvagalleria
+-- ------------------------------
+CREATE TABLE IF NOT EXISTS item_images (
+  id SERIAL PRIMARY KEY,
+  item_id INT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  image_url TEXT NOT NULL,
+  thumbnail_url TEXT,
+  sort_order INT NOT NULL DEFAULT 0,
+  is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT now()
+);
+
 
 -- ------------------------------
 -- users: järjestelmän käyttäjät (asiakkaat/admin)
