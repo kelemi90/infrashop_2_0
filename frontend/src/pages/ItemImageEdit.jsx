@@ -6,8 +6,8 @@ import buildImageUrl from '../utils/imageUrl';
 export default function ItemImageEdit(){
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
@@ -38,7 +38,7 @@ export default function ItemImageEdit(){
     return (i.name || '').toLowerCase().includes(q) || (i.sku || '').toLowerCase().includes(q) || (i.category || '').toLowerCase().includes(q);
   });
 
-  const onChoose = (it) => { setSelected(it); setFile(null); setMessage(''); };
+  const onChoose = (it) => { setSelected(it); setFiles([]); setMessage(''); };
 
   // editing state for admin edits
   const [editMode, setEditMode] = useState(false);
@@ -74,22 +74,22 @@ export default function ItemImageEdit(){
   };
 
   const upload = async () => {
-    if (!selected || !file) return setMessage('Valitse tiedosto');
+    if (!selected || !files.length) return setMessage('Valitse tiedosto');
     const fd = new FormData();
-    fd.append('image', file);
+    for (const f of files) fd.append('images', f);
     try {
       setUploading(true);
       setProgress(0);
       const res = await api.post(`/items/${selected.id}/image`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
           if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
         }
       });
-      setMessage('Uploaded');
+      setMessage(`Uploaded ${files.length} image(s)`);
       // refresh list
       const r = await api.get('/items'); setItems(r.data);
-      setSelected((s)=> ({...s, image_url: res.data.item.image_url}));
+      setSelected(res.data.item);
+      setFiles([]);
     } catch (err){
       console.error(err);
       setMessage(err.response?.data?.error || 'Upload failed');
@@ -100,11 +100,14 @@ export default function ItemImageEdit(){
   };
 
   useEffect(()=>{
-    if (!file) { setPreview(null); return; }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    if (!files.length) { setPreviews([]); return; }
+    const next = files.map((f) => ({ name: f.name, url: URL.createObjectURL(f) }));
+    setPreviews(next);
+    return () => next.forEach((p) => URL.revokeObjectURL(p.url));
+  }, [files]);
+
+  const imageUrls = selected?.image_urls || (selected?.image_url ? [selected.image_url] : []);
+  const thumbnailUrls = selected?.thumbnail_urls || (selected?.thumbnail_url ? [selected.thumbnail_url] : []);
 
   return (
     <div>
@@ -180,27 +183,39 @@ export default function ItemImageEdit(){
                 </div>
               )}
               <div>
-                {selected.image_url ? (
+                {imageUrls.length ? (
                   <div>
-                    <div>Full:</div>
-                    <img src={buildImageUrl(selected.image_url)} alt={selected.name} style={{ maxWidth:300 }} />
+                    <div>Full images ({imageUrls.length}):</div>
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:6 }}>
+                      {imageUrls.map((img, idx) => (
+                        <img key={`${img}-${idx}`} src={buildImageUrl(img)} alt={`${selected.name} ${idx + 1}`} style={{ maxWidth:140, maxHeight:140, objectFit:'cover' }} />
+                      ))}
+                    </div>
                   </div>
                 ) : <div>No image</div>}
-                {selected.thumbnail_url && (
+                {thumbnailUrls.length > 0 && (
                   <div style={{ marginTop:8 }}>
-                    <div>Thumbnail:</div>
-                    <img src={buildImageUrl(selected.thumbnail_url)} alt={`${selected.name} thumb`} style={{ maxWidth:150 }} />
+                    <div>Thumbnails ({thumbnailUrls.length}):</div>
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:6 }}>
+                      {thumbnailUrls.map((thumb, idx) => (
+                        <img key={`${thumb}-${idx}`} src={buildImageUrl(thumb)} alt={`${selected.name} thumb ${idx + 1}`} style={{ maxWidth:90, maxHeight:90, objectFit:'cover' }} />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
               <div style={{ marginTop:10 }}>
-                <input type="file" accept="image/*" onChange={e=>setFile(e.target.files[0])} />
-                <button onClick={upload} style={{ marginLeft:8 }} disabled={uploading}>{uploading ? 'Uploading...' : 'Upload'}</button>
+                <input type="file" accept="image/*" multiple onChange={e=>setFiles(Array.from(e.target.files || []))} />
+                <button onClick={upload} style={{ marginLeft:8 }} disabled={uploading}>{uploading ? 'Uploading...' : 'Upload selected'}</button>
               </div>
-              {preview && (
+              {previews.length > 0 && (
                 <div style={{ marginTop:8 }}>
-                  <div>Preview:</div>
-                  <img src={preview} alt="preview" style={{ maxWidth:200, marginTop:6 }} />
+                  <div>Preview ({previews.length}):</div>
+                  <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:6 }}>
+                    {previews.map((p) => (
+                      <img key={p.url} src={p.url} alt={p.name} style={{ maxWidth:120, maxHeight:120, objectFit:'cover' }} />
+                    ))}
+                  </div>
                 </div>
               )}
               {uploading && (

@@ -56,11 +56,19 @@
   position: relative;
 }
 
-.modal-card img {
+.modal-card > img,
+.modal-card .modal-main-image {
   width: 454px;
   height: 454px;
   object-fit: contain;
   margin: 12px 0;
+}
+
+.modal-card .modal-thumb-image {
+  width: 151px;
+  height: 151px;
+  object-fit: cover;
+  margin: 0;
 }
 
 .modal-close {
