@@ -25,7 +25,7 @@ export default function AdminGroups() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h2>Muokkaa tuoteryhmiä</h2>
-        {user && user.role === 'admin' && (
+        {user && (
           <div>
             <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }} style={{ background: '#c62828', color: '#fff', border: 'none', padding: '6px 10px', borderRadius:4, cursor:'pointer' }}>
               Logout
