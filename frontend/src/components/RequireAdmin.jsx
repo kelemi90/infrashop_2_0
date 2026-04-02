@@ -11,7 +11,7 @@ export default function RequireAdmin({ children, allowedRoles = ['admin'] }) {
   const [status, setStatus] = useState('checking'); // checking | redirecting
 
   let user = null;
-  try { user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || 'null') : null; } catch (e) { user = null; }
+  try { user = typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('user') || 'null') : null; } catch (e) { user = null; }
 
   useEffect(() => {
     if (status !== 'checking') return;

@@ -25,7 +25,7 @@ function isTableItem(name) {
 
 export default function AdminArchive() {
   const navigate = useNavigate();
-  const userJson = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const userJson = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
   let user = null;
   try { user = userJson ? JSON.parse(userJson) : null; } catch (e) { user = null; }
   const [events, setEvents] = useState([]);
@@ -96,7 +96,7 @@ export default function AdminArchive() {
         <h2>Admin – Arkisto</h2>
         {user && user.role === 'admin' && (
           <div>
-            <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }} style={{ background: '#c62828', color: '#fff', border: 'none', padding: '6px 10px', borderRadius:4, cursor:'pointer' }}>
+            <button onClick={() => { sessionStorage.removeItem('token'); sessionStorage.removeItem('user'); navigate('/'); }} style={{ background: '#c62828', color: '#fff', border: 'none', padding: '6px 10px', borderRadius:4, cursor:'pointer' }}>
               Logout
             </button>
           </div>

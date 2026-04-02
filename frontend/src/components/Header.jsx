@@ -9,7 +9,7 @@ export default function Header() {
   const navigate = useNavigate();
   const [showQuickCreate, setShowQuickCreate] = useState(false);
 
-  const userJson = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const userJson = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
   let user = null;
   try { user = userJson ? JSON.parse(userJson) : null; } catch (e) { user = null; }
 
@@ -49,7 +49,7 @@ export default function Header() {
         {user ? (
           <div style={{ marginLeft: 12 }}>
             <span style={{ marginRight: 8 }}>{user.display_name || user.email || user.id}</span>
-            <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }}>
+            <button onClick={() => { sessionStorage.removeItem('token'); sessionStorage.removeItem('user'); navigate('/'); }}>
               Logout
             </button>
           </div>

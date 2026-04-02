@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('Buildcat');
-  const [password, setPassword] = useState('buildcat');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -14,8 +14,8 @@ export default function LoginPage() {
     try {
       const res = await api.post('/auth/login', { email, password });
       const { token, user } = res.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      sessionStorage.setItem('token', token);
+      sessionStorage.setItem('user', JSON.stringify(user));
       navigate('/');
     } catch (err) {
       console.error(err);

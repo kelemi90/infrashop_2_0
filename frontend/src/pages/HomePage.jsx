@@ -3,9 +3,9 @@ import '../styles/home.css';
 import { canManageCatalog, isAdmin } from '../utils/roles';
 
 export default function HomePage() {
-  const loggedIn = (typeof window !== 'undefined') && Boolean(localStorage.getItem('token'));
+  const loggedIn = (typeof window !== 'undefined') && Boolean(sessionStorage.getItem('token'));
   let user = null;
-  try { user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || 'null') : null; } catch (e) { user = null; }
+  try { user = typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('user') || 'null') : null; } catch (e) { user = null; }
   const canManage = canManageCatalog(user);
   const adminOnly = isAdmin(user);
 
@@ -68,8 +68,8 @@ export default function HomePage() {
       description: 'Kirjaudu ulos järjestelmästä',
       loggedInOnly: true,
       onClick: () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
         window.location.reload();
       }
     }

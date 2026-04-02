@@ -29,7 +29,7 @@ export default function ItemGroupCard({ groupName }) {
         const [selectedQty, setSelectedQty] = useState(1);
         const [message, setMessage] = useState('');
 
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const token = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null;
         const user = decodeToken(token);
         const isAdmin = user && user.role === 'admin';
 

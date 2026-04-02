@@ -5,7 +5,7 @@ import '../styles/layout.css';
 import { canManageCatalog, isAdmin } from '../utils/roles';
 
 export default function Layout() {
-  const userJson = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const userJson = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
   let user = null;
   try { user = userJson ? JSON.parse(userJson) : null; } catch (e) { user = null; }
   // Quick-create modal moved to a dedicated page. Keep header links as navigation.
