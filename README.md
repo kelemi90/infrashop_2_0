@@ -199,7 +199,7 @@ This project now includes a small, portable helper that runs the admin creation 
 Usage (non-interactive):
 
 ```bash
-# defaults to Buildcat / buildcat
+# defaults admin
 ./scripts/run_create_admin.sh
 
 # specify credentials
