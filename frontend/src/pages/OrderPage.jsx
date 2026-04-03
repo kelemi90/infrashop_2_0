@@ -569,8 +569,8 @@ function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, 
       {items.length === 0 && groups.length === 0 && <p>Ei tuotteita</p>}
 
       {groups.map(g => (
-        <div key={`group-${g.group_id}`} className="cart-item group-item" style={{ display: 'block' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <div key={`group-${g.group_id}`} className="cart-item group-item cart-group-item">
+          <div className="cart-group-item-head">
             <span>{g.name}</span>
             <span>x {g.multiplier}</span>
             <button onClick={() => {
@@ -580,7 +580,7 @@ function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, 
             }}>✕</button>
           </div>
           {g.includedItems.length > 0 && (
-            <div className="muted" style={{ marginTop: 4 }}>
+            <div className="muted cart-group-item-details">
               Sisaltaa: {g.includedItems.map((it) => `${it.name} x${it.quantity}`).join(', ')}
             </div>
           )}

@@ -1,0 +1,84 @@
+.edit-order-page {
+  padding: 20px;
+  color: #000;
+}
+
+.edit-order-modal-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-order-modal {
+  background: #fff;
+  color: #000;
+  padding: 20px;
+  width: 800px;
+  max-height: 80%;
+  overflow: auto;
+}
+
+.edit-order-modal-error {
+  color: red;
+}
+
+.edit-order-modal-hint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 6px;
+}
+
+.edit-order-modal-requirements {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.edit-order-modal-requirements-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.edit-order-modal-toolbar {
+  margin-bottom: 8px;
+}
+
+.edit-order-modal-add-btn {
+  margin-left: 8px;
+}
+
+.edit-order-modal-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.edit-order-modal-row-name {
+  flex: 1;
+}
+
+.edit-order-modal-stock {
+  font-size: 12px;
+  color: #666;
+}
+
+.edit-order-modal-qty {
+  width: 80px;
+}
+
+.edit-order-modal-actions {
+  margin-top: 12px;
+}
+
+.edit-order-modal-cancel-btn {
+  margin-left: 8px;
+}

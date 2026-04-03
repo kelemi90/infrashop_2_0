@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import GroupEditor from '../components/GroupEditor';
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -67,12 +68,12 @@ export default function Admin() {
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className="admin-page">
+      <div className="admin-topbar">
         <h2>Admin – Arkisto</h2>
         {user && user.role === 'admin' && (
           <div>
-            <button onClick={() => { sessionStorage.removeItem('token'); sessionStorage.removeItem('user'); navigate('/'); }} style={{ background: '#c62828', color: '#fff', border: 'none', padding: '6px 10px', borderRadius:4, cursor:'pointer' }}>
+            <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }} className="admin-logout-btn">
               Logout
             </button>
           </div>
@@ -80,32 +81,24 @@ export default function Admin() {
       </div>
 
       {message && (
-        <div style={{ marginBottom: 10, color: 'green' }}>
+        <div className="admin-success-msg">
           {message}
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 30 }}>
+      <div className="admin-layout">
         {/* Tapahtumavalinta */}
-        <div style={{ minWidth: 250 }}>
+        <div className="admin-events-column">
           <h3>Tapahtumat</h3>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="admin-list-reset">
             {events.map(ev => (
               <li key={ev.id}>
                 <button
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: 8,
-                    marginBottom: 4,
-                    background: selectedEvent?.id === ev.id ? '#e0e0e0' : '#fff',
-                    border: '1px solid #ccc',
-                    cursor: 'pointer'
-                  }}
+                  className={`admin-event-btn ${selectedEvent?.id === ev.id ? 'admin-event-btn-active' : ''}`}
                   onClick={() => setSelectedEvent(ev)}
                 >
                   <strong>{ev.name}</strong><br />
-                  <span style={{ fontSize: 12, color: '#666' }}>
+                  <span className="admin-event-dates">
                     {ev.start_date?.slice(0, 10)} – {ev.end_date?.slice(0, 10)}
                   </span>
                 </button>
@@ -115,7 +108,7 @@ export default function Admin() {
         </div>
 
         {/* Tapahtuman sisältö */}
-        <div style={{ flex: 1 }}>
+        <div className="admin-content-column">
           {!selectedEvent && (
             <div>Valitse tapahtuma nähdäksesi arkistoidut tilaukset</div>
           )}
@@ -128,14 +121,7 @@ export default function Admin() {
 
               <button
                 onClick={returnItemsToStock}
-                style={{
-                  marginBottom: 12,
-                  background: '#c62828',
-                  color: '#fff',
-                  padding: '8px 12px',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
+                className="admin-return-btn"
               >
                 Palauta kaikki tavarat varastoon
               </button>
@@ -143,7 +129,7 @@ export default function Admin() {
               {groupedItems.length === 0 ? (
                 <div>Ei aktiivisia tilauksia</div>
               ) : (
-                <table width="100%" border="1" cellPadding="6" style={{ borderCollapse: 'collapse' }}>
+                <table width="100%" border="1" cellPadding="6" className="admin-table">
                   <thead>
                     <tr>
                       <th align="left">Tuote</th>
@@ -168,10 +154,10 @@ export default function Admin() {
           <hr />
 
           <h3>Item groups (Admin)</h3>
-          <div style={{ marginBottom: 8 }}>
+          <div className="admin-create-row">
             <input placeholder="Group name" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} />
-            <input placeholder="Description" value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} style={{ marginLeft: 8 }} />
-            <button style={{ marginLeft: 8 }} onClick={async () => {
+            <input placeholder="Description" value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} className="admin-ml8" />
+            <button className="admin-ml8" onClick={async () => {
               try {
                 const res = await api.post('/item-groups', { name: newGroupName, description: newGroupDesc });
                 setItemGroups(prev => [...prev, res.data]);
@@ -180,14 +166,14 @@ export default function Admin() {
             }}>Create group</button>
           </div>
 
-          <div style={{ display: 'flex', gap: 20 }}>
-            <div style={{ minWidth: 260 }}>
+          <div className="admin-groups-layout">
+            <div className="admin-groups-sidebar">
               <h4>Groups</h4>
-              <ul style={{ listStyle: 'none', padding: 0 }}>
+              <ul className="admin-list-reset">
                 {itemGroups.map(g => (
-                  <li key={g.id} style={{ marginBottom: 6 }}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <button style={{ flex: 1, textAlign: 'left' }} onClick={() => navigate(`/admin/groups/${g.id}/edit`)}>{g.name}</button>
+                  <li key={g.id} className="admin-list-item-gap">
+                    <div className="admin-list-row">
+                      <button className="admin-list-main-btn" onClick={() => navigate(`/admin/groups/${g.id}/edit`)}>{g.name}</button>
                       <button onClick={async () => {
                         // quick inline edit shortcut (keeps previous behavior)
                         setEditingGroupId(g.id);
@@ -202,7 +188,7 @@ export default function Admin() {
               </ul>
             </div>
 
-            <div style={{ flex: 1 }}>
+            <div className="admin-groups-content">
                 {editingGroupId ? (
                   <div>
                     <h4>Edit group items</h4>

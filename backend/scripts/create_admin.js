@@ -2,7 +2,7 @@
 // Usage:
 //   node backend/scripts/create_admin.js
 // Environment overrides:
-//   ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_DISPLAY_NAME, ADMIN_ROLE
+//   ADMIN_EMAIL (required), ADMIN_PASSWORD (required), ADMIN_DISPLAY_NAME (optional), ADMIN_ROLE (optional)
 // The script will attempt to reuse `backend/db.js` (project Pool). If you run this
 // script from a temporary Node container (recommended for production images that
 // don't include dev tooling), make sure DB connection env vars (DATABASE_URL or
@@ -33,9 +33,9 @@ try {
   pool = new Pool(getDbConfig());
 }
 
-const email = (process.env.ADMIN_EMAIL || '').trim();
-const password = process.env.ADMIN_PASSWORD || '';
-const displayName = (process.env.ADMIN_DISPLAY_NAME || email).trim();
+const email = process.env.ADMIN_EMAIL;
+const password = process.env.ADMIN_PASSWORD;
+const displayName = process.env.ADMIN_DISPLAY_NAME || process.env.ADMIN_EMAIL;
 const role = process.env.ADMIN_ROLE || ROLE_ADMIN;
 
 function normalizeRole(inputRole) {
@@ -43,7 +43,23 @@ function normalizeRole(inputRole) {
   throw new Error(`Unsupported role: ${inputRole}`);
 }
 
+function validateRequiredEnv() {
+  const missing = [];
+  if (!email) missing.push('ADMIN_EMAIL');
+  if (!password) missing.push('ADMIN_PASSWORD');
+
+  if (missing.length) {
+    console.error(`Missing required env vars: ${missing.join(', ')}`);
+    console.error('Set ADMIN_EMAIL and ADMIN_PASSWORD before running this script.');
+    process.exitCode = 1;
+    return false;
+  }
+  return true;
+}
+
 async function main() {
+  if (!validateRequiredEnv()) return;
+
   try {
     if (!email) throw new Error('ADMIN_EMAIL is required (or pass --email via scripts/run_create_admin.sh).');
     if (!password) throw new Error('ADMIN_PASSWORD is required (or pass --password via scripts/run_create_admin.sh).');

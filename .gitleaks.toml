@@ -1,0 +1,13 @@
+title = "infrashop-gitleaks"
+
+[allowlist]
+description = "Allow non-secret placeholders and docs examples"
+regexes = [
+  "replace-with-",
+  "example.com",
+  "test-secret-ci"
+]
+paths = [
+  '''db_backup\.dump''',
+  '''docs/.*'''
+]
