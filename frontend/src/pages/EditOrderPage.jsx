@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import EditOrderModal from '../components/EditOrderModal';
+import '../styles/edit-order-modal.css';
 
 export default function EditOrderPage() {
   const { id } = useParams();
@@ -12,7 +13,7 @@ export default function EditOrderPage() {
   }, []);
 
   return (
-    <div style={{ padding: 20 }}>
+    <div className="edit-order-page">
       <h2>Muokkaa tilausta #{id}</h2>
       <EditOrderModal
         orderId={parseInt(id, 10)}

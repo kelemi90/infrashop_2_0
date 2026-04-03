@@ -200,7 +200,7 @@ Usage (non-interactive):
 
 ```bash
 # explicit credentials are required
-./scripts/run_create_admin.sh --email admin@example.com --password 'strong-password'
+./scripts/run_create_admin.sh
 
 # specify credentials
 ./scripts/run_create_admin.sh --email admin@example.com --password S3cret --display 'Site Admin'
@@ -209,6 +209,51 @@ Usage (non-interactive):
 The `scripts/setup_prod.sh` setup helper now calls this wrapper during bootstrap (it respects `--dry-run` and `--no-backup` flags). If the wrapper fails, the setup script will fall back to an internal hash generation method.
 
 If you prefer to manually create and promote a user, the old instructions still work (signup via API + psql promote). There's also a `scripts/check_truncated_hashes.sh` helper that lists users with unusually short `password_hash` values so you can inspect and fix them.
+
+## Security quick reference
+
+Do not commit secrets to git. Keep real values only in local `.env`, deployment secret stores, or CI secrets.
+
+### Local: required admin env vars
+
+`backend/scripts/create_admin.js` now requires `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+
+Example (local shell):
+
+```bash
+cd /srv/infrashop
+export ADMIN_EMAIL='admin@example.com'
+export ADMIN_PASSWORD='replace-with-strong-password'
+export ADMIN_DISPLAY_NAME='Admin'
+node backend/scripts/create_admin.js
+```
+
+One-liner version:
+
+```bash
+ADMIN_EMAIL='admin@example.com' ADMIN_PASSWORD='replace-with-strong-password' ADMIN_DISPLAY_NAME='Admin' node backend/scripts/create_admin.js
+```
+
+If env vars are missing, the script exits with an error.
+
+### Local: gitleaks scan
+
+Run a repository scan before pushing:
+
+```bash
+docker run --rm -v "$PWD":/repo zricethezav/gitleaks:latest detect --source /repo --config /repo/.gitleaks.toml --verbose
+```
+
+### CI: gitleaks check
+
+CI runs a `secret-scan` job in `.github/workflows/ci.yml` before build/test.
+It uses `gitleaks/gitleaks-action@v2` with:
+
+```text
+detect --source . --config .gitleaks.toml --verbose
+```
+
+If secrets are detected, CI fails and blocks the PR until fixed.
 
 ## Dependency security: npm overrides and rationale
 

@@ -68,49 +68,49 @@ export default function ItemGroupCard({ groupName }) {
         };
 
         return (
-                <div style={{ width: 260, border: '1px solid #ddd', padding: 8, borderRadius: 6 }}>
+                <div className="item-group-card">
                         {groupName.image_url ? (
-                                <img src={buildImageUrl(groupName.image_url)} alt={groupName.name} style={{ width: '100%', height: 120, objectFit: 'cover' }} />
+                                <img src={buildImageUrl(groupName.image_url)} alt={groupName.name} className="item-group-card-image" />
                         ) : (
-                                <div style={{ height: 120, background: '#fafafa' }} />
+                                <div className="item-group-card-image-placeholder" />
                         )}
                         <h4>{groupName.name}</h4>
-                        <div style={{ fontSize: 13, color: '#444' }}>{groupName.description}</div>
+                        <div className="item-group-card-description">{groupName.description}</div>
 
                         {isAdmin && !isEditing && (
-                            <div style={{ marginTop: 8 }}>
+                            <div className="item-group-card-actions-top">
                                 <button onClick={() => { setIsEditing(true); setMessage(''); }}>Edit group items</button>
                             </div>
                         )}
 
                         {isEditing && (
-                            <div style={{ marginTop: 10 }}>
-                                <div style={{ marginBottom: 8 }}>
+                            <div className="item-group-card-editor">
+                                <div className="item-group-card-editor-toolbar">
                                     <select value={selectedAdd} onChange={e => setSelectedAdd(e.target.value)}>
                                         <option value="">-- Valitse tuote --</option>
                                         {allItems.map(ai => (
                                             <option key={ai.id} value={ai.id}>{ai.name} (var: {ai.available_stock})</option>
                                         ))}
                                     </select>
-                                    <input type="number" min="1" value={selectedQty} onChange={e => setSelectedQty(Number(e.target.value))} style={{ width:80, marginLeft:8 }} />
-                                    <button style={{ marginLeft:8 }} onClick={addItem}>Add</button>
+                                    <input type="number" min="1" value={selectedQty} onChange={e => setSelectedQty(Number(e.target.value))} className="item-group-card-qty" />
+                                    <button className="item-group-card-btn-spaced" onClick={addItem}>Add</button>
                                 </div>
 
                                 <div>
                                     {editingItems.map((it, idx) => (
-                                        <div key={idx} style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
-                                            <div style={{ flex:1 }}>{it.name}</div>
-                                            <input type="number" min="1" value={it.quantity} onChange={e => { const copy = [...editingItems]; copy[idx].quantity = Number(e.target.value); setEditingItems(copy); }} style={{ width:80 }} />
+                                        <div key={idx} className="item-group-card-edit-row">
+                                            <div className="item-group-card-edit-name">{it.name}</div>
+                                            <input type="number" min="1" value={it.quantity} onChange={e => { const copy = [...editingItems]; copy[idx].quantity = Number(e.target.value); setEditingItems(copy); }} className="item-group-card-qty-only" />
                                             <button onClick={() => setEditingItems(prev => prev.filter((_,i)=>i!==idx))}>Remove</button>
                                         </div>
                                     ))}
                                 </div>
 
-                                <div style={{ marginTop: 10 }}>
+                                <div className="item-group-card-editor-actions">
                                     <button onClick={save}>Save</button>
-                                    <button style={{ marginLeft: 8 }} onClick={() => { setIsEditing(false); setEditingItems([]); }}>Cancel</button>
+                                    <button className="item-group-card-btn-spaced" onClick={() => { setIsEditing(false); setEditingItems([]); }}>Cancel</button>
                                 </div>
-                                {message && <div style={{ marginTop:8 }}>{message}</div>}
+                                {message && <div className="item-group-card-message">{message}</div>}
                             </div>
                         )}
                 </div>

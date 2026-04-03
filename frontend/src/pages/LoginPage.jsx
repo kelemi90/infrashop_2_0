@@ -24,17 +24,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ maxWidth: 420, margin: '40px auto', padding: 20, border: '1px solid #ddd', borderRadius: 6 }}>
+    <div className="login-page-card">
       <h2>Kirjaudu</h2>
-      {error && <div style={{ color: 'red' }}>{error}</div>}
+      {error && <div className="login-page-error">{error}</div>}
       <form onSubmit={submit}>
-        <div style={{ marginBottom: 8 }}>
+        <div className="login-page-field">
           <label>Username/email<br />
             <input value={email} onChange={e => setEmail(e.target.value)} />
           </label>
         </div>
 
-        <div style={{ marginBottom: 8 }}>
+        <div className="login-page-field">
           <label>Salasana<br />
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
           </label>

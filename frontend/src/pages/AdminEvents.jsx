@@ -64,13 +64,13 @@ export default function AdminEvents() {
   };
 
   return (
-    <div>
+    <div className="admin-events-page">
       <h2>Admin - Luo tapahtuma</h2>
 
-      {error && <div style={{ color: '#b71c1c', marginBottom: 10 }}>{error}</div>}
-      {success && <div style={{ color: '#1b5e20', marginBottom: 10 }}>{success}</div>}
+      {error && <div className="admin-events-error">{error}</div>}
+      {success && <div className="admin-events-success">{success}</div>}
 
-      <form onSubmit={submit} style={{ display: 'grid', gap: 10, maxWidth: 460, marginBottom: 22 }}>
+      <form onSubmit={submit} className="admin-events-form">
         <label>
           Tapahtuman nimi
           <input
@@ -109,7 +109,7 @@ export default function AdminEvents() {
       ) : events.length === 0 ? (
         <div>Ei tapahtumia.</div>
       ) : (
-        <table width="100%" border="1" cellPadding="6" style={{ borderCollapse: 'collapse', maxWidth: 820 }}>
+        <table width="100%" border="1" cellPadding="6" className="admin-events-table">
           <thead>
             <tr>
               <th align="left">Nimi</th>

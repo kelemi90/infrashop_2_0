@@ -121,8 +121,8 @@ export default function ItemImageEdit(){
           <ul className="item-list">
             {filteredItems.map(it=> (
               <li key={it.id}>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <button style={{ flex:1, textAlign:'left' }} onClick={()=>onChoose(it)}>{it.name} {it.available_stock !== undefined ? `(var: ${it.available_stock})` : ''}</button>
+                <div className="item-image-edit-list-row">
+                  <button className="item-image-edit-list-btn" onClick={()=>onChoose(it)}>{it.name} {it.available_stock !== undefined ? `(var: ${it.available_stock})` : ''}</button>
                 </div>
               </li>
             ))}
@@ -134,8 +134,8 @@ export default function ItemImageEdit(){
               {selected && (
             <div>
               <h3>{selected.name}</h3>
-              <div style={{ marginTop:8 }}>
-                <button onClick={()=>{ setEditMode(em => !em); setMessage(''); }} style={{ marginRight:8 }}>{editMode ? 'Cancel edit' : 'Edit item'}</button>
+              <div className="item-image-edit-mt8">
+                <button onClick={()=>{ setEditMode(em => !em); setMessage(''); }} className="item-image-edit-mr8">{editMode ? 'Cancel edit' : 'Edit item'}</button>
               </div>
               {editMode && (
                 <div className="edit-box">
@@ -182,8 +182,8 @@ export default function ItemImageEdit(){
                     </div>
                   </div>
 
-                  <div style={{ marginTop:8 }}>
-                    <button onClick={saveEdit} style={{ marginRight:8 }}>Save</button>
+                  <div className="item-image-edit-mt8">
+                    <button onClick={saveEdit} className="item-image-edit-mr8">Save</button>
                     <button onClick={()=>setEditMode(false)}>Cancel</button>
                   </div>
                 </div>
@@ -192,47 +192,45 @@ export default function ItemImageEdit(){
                 {imageUrls.length ? (
                   <div>
                     <div>Full images ({imageUrls.length}):</div>
-                    <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:6 }}>
+                    <div className="item-image-edit-image-grid">
                       {imageUrls.map((img, idx) => (
-                        <img key={`${img}-${idx}`} src={buildImageUrl(img)} alt={`${selected.name} ${idx + 1}`} style={{ maxWidth:140, maxHeight:140, objectFit:'cover' }} />
+                        <img key={`${img}-${idx}`} src={buildImageUrl(img)} alt={`${selected.name} ${idx + 1}`} className="item-image-edit-full-image" />
                       ))}
                     </div>
                   </div>
                 ) : <div>No image</div>}
                 {thumbnailUrls.length > 0 && (
-                  <div style={{ marginTop:8 }}>
+                  <div className="item-image-edit-mt8">
                     <div>Thumbnails ({thumbnailUrls.length}):</div>
-                    <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:6 }}>
+                    <div className="item-image-edit-image-grid">
                       {thumbnailUrls.map((thumb, idx) => (
-                        <img key={`${thumb}-${idx}`} src={buildImageUrl(thumb)} alt={`${selected.name} thumb ${idx + 1}`} style={{ maxWidth:90, maxHeight:90, objectFit:'cover' }} />
+                        <img key={`${thumb}-${idx}`} src={buildImageUrl(thumb)} alt={`${selected.name} thumb ${idx + 1}`} className="item-image-edit-thumb-image" />
                       ))}
                     </div>
                   </div>
                 )}
               </div>
-              <div style={{ marginTop:10 }}>
+              <div className="item-image-edit-mt10">
                 <input type="file" accept="image/*" multiple onChange={e=>setFiles(Array.from(e.target.files || []))} />
-                <button onClick={upload} style={{ marginLeft:8 }} disabled={uploading}>{uploading ? 'Uploading...' : 'Upload selected'}</button>
+                <button onClick={upload} className="item-image-edit-ml8" disabled={uploading}>{uploading ? 'Uploading...' : 'Upload selected'}</button>
               </div>
               {previews.length > 0 && (
-                <div style={{ marginTop:8 }}>
+                <div className="item-image-edit-mt8">
                   <div>Preview ({previews.length}):</div>
-                  <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:6 }}>
+                  <div className="item-image-edit-image-grid">
                     {previews.map((p) => (
-                      <img key={p.url} src={p.url} alt={p.name} style={{ maxWidth:120, maxHeight:120, objectFit:'cover' }} />
+                      <img key={p.url} src={p.url} alt={p.name} className="item-image-edit-preview-image" />
                     ))}
                   </div>
                 </div>
               )}
               {uploading && (
-                <div style={{ marginTop:8 }}>
+                <div className="item-image-edit-mt8">
                   <div>Progress: {progress}%</div>
-                  <div style={{ background:'#eee', width:200, height:8 }}>
-                    <div style={{ background:'#4caf50', width:`${progress}%`, height:8 }} />
-                  </div>
+                  <progress className="item-image-edit-progress" value={progress} max="100" />
                 </div>
               )}
-              {message && <div style={{ marginTop:8 }}>{message}</div>}
+              {message && <div className="item-image-edit-mt8">{message}</div>}
             </div>
           )}
         </div>

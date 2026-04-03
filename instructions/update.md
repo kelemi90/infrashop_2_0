@@ -19,14 +19,13 @@ sudo journalctl -u infrashop-backend.service -n 80 --no-pager
 
 ## Create backend-managed users
 ```bash
-sudo -u infrashop bash -lc "cd /srv/infrashop/backend && ADMIN_EMAIL=moderator@vectorama.fi ADMIN_PASSWORD='REPLACE_ME' ADMIN_DISPLAY_NAME='Moderator' npm run create_moderator"
-sudo -u infrashop bash -lc "cd /srv/infrashop/backend && ADMIN_EMAIL=admin@vectorama.fi ADMIN_PASSWORD='REPLACE_ME' ADMIN_DISPLAY_NAME='Admin' npm run create_admin"
+sudo -u infrashop bash -lc "cd /srv/infrashop/backend && ADMIN_EMAIL=moderator@example.com ADMIN_PASSWORD='<MODERATOR_PASSWORD>' ADMIN_DISPLAY_NAME='Moderator' npm run create_moderator"
+sudo -u infrashop bash -lc "cd /srv/infrashop/backend && ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='<ADMIN_PASSWORD>' ADMIN_DISPLAY_NAME='Admin' npm run create_admin"
 ```
-
 ## Backend (manual fallback, if service is not used)
 ```bash
 pkill -u infrashop -f '^/usr/bin/node server.js$' || true
-sudo -u infrashop bash -lc "cd /srv/infrashop/backend && DB_HOST=127.0.0.1 DB_PORT=5432 DB_USER=infrashop DB_PASSWORD=qpatslVwuwdpidzWLyNr1lUKiYt6WPgS DB_NAME=infrashop nohup /usr/bin/node server.js > /tmp/infrashop-backend.log 2>&1 &"
+sudo -u infrashop bash -lc "cd /srv/infrashop/backend && DB_HOST=127.0.0.1 DB_PORT=5432 DB_USER=infrashop DB_PASSWORD='<DB_PASSWORD>' DB_NAME=infrashop nohup /usr/bin/node server.js > /tmp/infrashop-backend.log 2>&1 &"
 ```
 
 ## Quick verification

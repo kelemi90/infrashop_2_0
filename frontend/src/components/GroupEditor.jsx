@@ -38,30 +38,30 @@ export default function GroupEditor({ value = [], onChange, allItems = [], onSav
 
   return (
     <div>
-      <div style={{ marginBottom: 8 }}>
+      <div className="group-editor-toolbar">
         <input
           type="text"
           placeholder="Hae tuotetta nimellä"
           value={itemSearch}
           onChange={(e) => setItemSearch(e.target.value)}
-          style={{ width: '100%', marginBottom: 8 }}
+          className="group-editor-search"
         />
 
-        <div style={{ marginBottom: 8, display: 'inline-block', width: 'fit-content', maxWidth: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, background: '#f8fafc', color: '#111827' }}>
+        <div className="group-editor-selected">
           {selectedItem ? `Valittu tuote: ${selectedItem.name}` : 'Valittu tuote: ei valittu'}
         </div>
-        <input type="number" min="1" value={selectedAddQty} onChange={e => setSelectedAddQty(Number(e.target.value))} style={{ width:80, marginLeft:8 }} />
-        <button style={{ marginLeft:8 }} onClick={addSelected}>Add</button>
-        {onClose && <button style={{ marginLeft:8 }} onClick={onClose}>Close</button>}
+        <input type="number" min="1" value={selectedAddQty} onChange={e => setSelectedAddQty(Number(e.target.value))} className="group-editor-qty" />
+        <button className="group-editor-btn-spaced" onClick={addSelected}>Add</button>
+        {onClose && <button className="group-editor-btn-spaced" onClick={onClose}>Close</button>}
       </div>
 
-      <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 6, padding: 6, marginBottom: 10 }}>
+      <div className="group-editor-items-list">
         {filteredItems.map((ai) => (
-          <div key={ai.id} style={{ marginBottom: 6 }}>
+          <div key={ai.id} className="group-editor-item-row">
             <button
               type="button"
               onClick={() => setSelectedAddItem(String(ai.id))}
-              style={{ width: '100%', textAlign: 'left' }}
+              className="group-editor-item-btn"
             >
               {ai.name} (var: {ai.available_stock})
             </button>
@@ -72,15 +72,15 @@ export default function GroupEditor({ value = [], onChange, allItems = [], onSav
 
       <div>
         {value.map((it, idx) => (
-          <div key={idx} style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
-            <div style={{ flex:1 }}>{it.name}</div>
-            <input type="number" min="1" value={it.quantity} onChange={e => updateQty(idx, e.target.value)} style={{ width:80 }} />
+          <div key={idx} className="group-editor-edit-row">
+            <div className="group-editor-edit-name">{it.name}</div>
+            <input type="number" min="1" value={it.quantity} onChange={e => updateQty(idx, e.target.value)} className="group-editor-qty-only" />
             <button onClick={() => removeItem(idx)}>Remove</button>
           </div>
         ))}
       </div>
 
-      <div style={{ marginTop:10 }}>
+      <div className="group-editor-save-wrap">
         {onSave && <button onClick={onSave} disabled={saving}>{saving ? 'Saving…' : 'Save group items'}</button>}
       </div>
     </div>

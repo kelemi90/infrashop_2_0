@@ -131,7 +131,7 @@ export default function ReportsPage() {
                   ))}
                 </tbody>
               </table>
-              <p style={{ marginTop: 8, fontWeight: 600 }}>Poytia yhteensa: {totalTables}</p>
+              <p className="reports-table-total">Poytia yhteensa: {totalTables}</p>
             </>
           )}
         </div>
@@ -162,11 +162,11 @@ export default function ReportsPage() {
         </div>
       ))}
 
-      <div style={{ marginTop: 24 }}>
+      <div className="reports-group-section">
         <h3>Group reports</h3>
         <button onClick={loadGroupReport}>Load group report</button>
         {groupData.length > 0 && (
-          <table style={{ marginTop: 8 }}>
+          <table className="reports-group-table">
             <thead>
               <tr>
                 <th>Group</th>

@@ -29,7 +29,7 @@ export default function ItemDetail() {
             <img
                 src={imageSrc}
                 alt={item.name}
-                style={{ maxWidth: 480 }}
+                className="item-detail-main-image"
                 onError={(e) => {
                     if (!e.target.dataset.fallback) {
                         e.target.dataset.fallback = '1';
@@ -40,20 +40,14 @@ export default function ItemDetail() {
                 }}
             />
             {imageUrls.length > 1 && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                <div className="item-detail-thumbs">
                     {imageUrls.map((img, idx) => (
                         <img
                             key={`${img}-${idx}`}
                             src={buildImageUrl(img)}
                             alt={`${item.name} ${idx + 1}`}
                             onClick={() => setActiveImage(idx)}
-                            style={{
-                                width: 88,
-                                height: 88,
-                                objectFit: 'cover',
-                                cursor: 'pointer',
-                                border: idx === safeIndex ? '2px solid #333' : '1px solid #ccc'
-                            }}
+                            className={`item-detail-thumb ${idx === safeIndex ? 'item-detail-thumb-active' : ''}`}
                         />
                     ))}
                 </div>

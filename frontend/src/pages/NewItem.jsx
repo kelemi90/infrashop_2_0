@@ -51,14 +51,14 @@ export default function NewItem(){
   return (
     <div>
       <h2>Lisää uusi tuote</h2>
-      <form onSubmit={create} style={{ maxWidth:600 }}>
+      <form onSubmit={create} className="new-item-form">
         {/* SKU is generated automatically by the system */}
-        <div style={{ marginBottom:8 }}>
+        <div className="new-item-field">
           <label>Nimi *<br/>
             <input required value={name} onChange={e=>setName(e.target.value)} />
           </label>
         </div>
-        <div style={{ marginBottom:8 }}>
+        <div className="new-item-field">
           <label>Lyhyt kuvaus<br/>
             <textarea value={shortDescription} onChange={e=>setShortDescription(e.target.value)} />
           </label>
@@ -75,7 +75,7 @@ export default function NewItem(){
             <input type="number" value={availableStock} onChange={e=>setAvailableStock(e.target.value)} />
           </label>
         </div>
-        <div style={{ marginBottom:8 }}>
+        <div className="new-item-field">
           <label>Kategoria<br/>
             <select value={category} onChange={e=>setCategory(e.target.value)}>
               <option value="">Valitse kategoria</option>
@@ -87,7 +87,7 @@ export default function NewItem(){
         </div>
         <div>
           <button type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create item'}</button>
-          <span style={{ marginLeft:12 }}>{message}</span>
+          <span className="new-item-message">{message}</span>
         </div>
       </form>
     </div>

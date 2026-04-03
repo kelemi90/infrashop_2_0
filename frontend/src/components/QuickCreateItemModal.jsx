@@ -58,13 +58,13 @@ export default function QuickCreateItemModal({ onClose, onCreated }){
   };
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
-      <div style={{ background:'#fff', padding:20, borderRadius:6, width:520, maxWidth:'95%' }}>
+    <div className="quick-create-modal-overlay">
+      <div className="quick-create-modal-card">
         {!created ? (
           <>
-            <h3 style={{ marginTop:0 }}>Quick create item</h3>
+            <h3 className="quick-create-modal-title">Quick create item</h3>
             <form onSubmit={submit}>
-              <div style={{ display:'grid', gap:8 }}>
+              <div className="quick-create-modal-grid">
                 {/* SKU will be generated automatically */}
                 <input placeholder="Name *" value={name} onChange={e=>setName(e.target.value)} required />
                 <select value={category} onChange={e=>setCategory(e.target.value)}>
@@ -72,27 +72,27 @@ export default function QuickCreateItemModal({ onClose, onCreated }){
                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <input placeholder="Short description" value={shortDescription} onChange={e=>setShortDescription(e.target.value)} />
-                <div style={{ display:'flex', gap:8 }}>
+                <div className="quick-create-modal-stock-row">
                   <input type="number" placeholder="Total" value={totalStock} onChange={e=>setTotalStock(e.target.value)} />
                   <input type="number" placeholder="Available" value={availableStock} onChange={e=>setAvailableStock(e.target.value)} />
                 </div>
               </div>
 
-              {error && <div style={{ color:'crimson', marginTop:8 }}>{error}</div>}
+              {error && <div className="quick-create-modal-error">{error}</div>}
 
-              <div style={{ marginTop:12, display:'flex', gap:8, justifyContent:'flex-end' }}>
-                <button type="button" onClick={onClose} disabled={loading} style={{ background:'#eee', border:'1px solid #ccc', padding:'6px 10px', borderRadius:4 }}>Cancel</button>
-                <button type="submit" disabled={loading} style={{ background:'#007bff', color:'#fff', border:'none', padding:'6px 12px', borderRadius:4 }}>{loading ? 'Creating...' : 'Create'}</button>
+              <div className="quick-create-modal-actions">
+                <button type="button" onClick={onClose} disabled={loading} className="quick-create-modal-btn quick-create-modal-btn-cancel">Cancel</button>
+                <button type="submit" disabled={loading} className="quick-create-modal-btn quick-create-modal-btn-create">{loading ? 'Creating...' : 'Create'}</button>
               </div>
             </form>
           </>
         ) : (
           <>
-            <h3 style={{ marginTop:0 }}>Item created</h3>
+            <h3 className="quick-create-modal-title">Item created</h3>
             <div>Item <strong>{created.name}</strong> (id {created.id}) was created.</div>
-            <div style={{ marginTop:12, display:'flex', gap:8, justifyContent:'flex-end' }}>
-              <button onClick={createAnother} style={{ background:'#eee', border:'1px solid #ccc', padding:'6px 10px', borderRadius:4 }}>Create another</button>
-              <button onClick={goToUpload} style={{ background:'#28a745', color:'#fff', border:'none', padding:'6px 12px', borderRadius:4 }}>Upload image</button>
+            <div className="quick-create-modal-actions">
+              <button onClick={createAnother} className="quick-create-modal-btn quick-create-modal-btn-cancel">Create another</button>
+              <button onClick={goToUpload} className="quick-create-modal-btn quick-create-modal-btn-upload">Upload image</button>
             </div>
           </>
         )}
