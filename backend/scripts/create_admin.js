@@ -2,7 +2,7 @@
 // Usage:
 //   node backend/scripts/create_admin.js
 // Environment overrides:
-//   ADMIN_EMAIL (required), ADMIN_PASSWORD (required), ADMIN_DISPLAY_NAME (optional)
+//   ADMIN_EMAIL (required), ADMIN_PASSWORD (required), ADMIN_DISPLAY_NAME (optional), ADMIN_ROLE (optional)
 // The script will attempt to reuse `backend/db.js` (project Pool). If you run this
 // script from a temporary Node container (recommended for production images that
 // don't include dev tooling), make sure DB connection env vars (DATABASE_URL or
@@ -35,6 +35,12 @@ try {
 const email = process.env.ADMIN_EMAIL;
 const password = process.env.ADMIN_PASSWORD;
 const displayName = process.env.ADMIN_DISPLAY_NAME || process.env.ADMIN_EMAIL;
+const role = process.env.ADMIN_ROLE || ROLE_ADMIN;
+
+function normalizeRole(inputRole) {
+  if (inputRole === ROLE_ADMIN || inputRole === ROLE_MODERATOR) return inputRole;
+  throw new Error(`Unsupported role: ${inputRole}`);
+}
 
 function validateRequiredEnv() {
   const missing = [];
