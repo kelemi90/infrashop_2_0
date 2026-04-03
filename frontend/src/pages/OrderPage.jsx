@@ -338,6 +338,7 @@ export default function OrderPage() {
 
             <CartSidebar
               orderInfo={orderInfo}
+              events={events}
               cart={cart}
               cartGroups={cartGroups}
               itemGroups={itemGroups}
@@ -544,7 +545,7 @@ function ProductsSection({ groupedItems, itemGroups, addGroupToCart, cart, addTo
   );
 }
 
-function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, onSubmit }) {
+function CartSidebar({ orderInfo, events, cart, cartGroups, itemGroups, groupItemsById, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, onSubmit }) {
   const items = Object.values(cart).filter(i => i.quantity > 0);
   const groups = Object.entries(cartGroups || {}).map(([gid, mult]) => {
     const found = (itemGroups || []).find((g) => String(g.id) === String(gid));
@@ -559,12 +560,39 @@ function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, 
     }));
   };
 
+  const selectedEvent = (events || []).find((ev) => String(ev.id) === String(orderInfo.eventId));
+
   return (
     <aside className="cart">
       <h3>Ostoskori</h3>
-      <div className="cart-delivery-point">
-        <span className="order-context-label">Toimituspiste</span>
-        <strong>{orderInfo.deliveryPoint}</strong>
+
+      <div className="cart-order-summary">
+        <div className="cart-summary-row cart-summary-primary">
+          <span className="cart-summary-label">Toimituspiste</span>
+          <strong className="cart-summary-value">{orderInfo.deliveryPoint || '—'}</strong>
+        </div>
+        <div className="cart-summary-row">
+          <span className="cart-summary-label">Tilaaja</span>
+          <span className="cart-summary-value">{orderInfo.name || '—'}</span>
+        </div>
+        {orderInfo.organization && (
+          <div className="cart-summary-row">
+            <span className="cart-summary-label">Edustaa</span>
+            <span className="cart-summary-value">{orderInfo.organization}</span>
+          </div>
+        )}
+        {selectedEvent && (
+          <div className="cart-summary-row">
+            <span className="cart-summary-label">Tapahtuma</span>
+            <span className="cart-summary-value">{selectedEvent.name}</span>
+          </div>
+        )}
+        {orderInfo.returnDate && (
+          <div className="cart-summary-row">
+            <span className="cart-summary-label">Palautuspäivä</span>
+            <span className="cart-summary-value">{orderInfo.returnDate}</span>
+          </div>
+        )}
       </div>
       {items.length === 0 && groups.length === 0 && <p>Ei tuotteita</p>}
 

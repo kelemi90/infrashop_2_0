@@ -64,10 +64,14 @@ export default function NewItem(){
           </label>
         </div>
         <div style={{ display:'flex', gap:12, marginBottom:8 }}>
-          <label>Yhteensä varastossa<br/>
+          <label>
+            Varastossa yhteensä<br/>
+            <small style={{ color:'#999', fontWeight:'normal' }}>Fyysinen kokonaismäärä</small><br/>
             <input type="number" value={totalStock} onChange={e=>setTotalStock(e.target.value)} />
           </label>
-          <label>Saatavilla<br/>
+          <label>
+            Varattavissa<br/>
+            <small style={{ color:'#999', fontWeight:'normal' }}>Ei varattuna tilauksiin</small><br/>
             <input type="number" value={availableStock} onChange={e=>setAvailableStock(e.target.value)} />
           </label>
         </div>
