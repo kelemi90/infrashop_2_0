@@ -3,7 +3,7 @@ import api from '../api';
 import buildImageUrl from '../utils/imageUrl';
 import '../styles/edit-order-modal.css';
 
-export default function EditOrderModal({ orderId, onClose, onSaved }) {
+export default function EditOrderModal({ orderId, customerName, onClose, onSaved }) {
   const [order, setOrder] = useState(null);
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
@@ -22,8 +22,10 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
 
   useEffect(() => {
     if (!orderId) return;
-    // fetch order details (requires auth)
-    api.get(`/orders/${orderId}`)
+    // fetch order details; unauthenticated flow can read by matching customer_name
+    api.get(`/orders/${orderId}`, {
+      params: customerName ? { customer_name: customerName } : undefined,
+    })
       .then(res => {
         setOrder(res.data.order);
         // map items to editable shape
@@ -40,7 +42,7 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
 
     // also fetch available items for adding lines
     api.get('/items').then(r => setAvailableItems(r.data)).catch(() => {});
-  }, [orderId]);
+  }, [orderId, customerName]);
 
   if (!orderId) return null;
 

@@ -11,7 +11,8 @@
 .order-success-card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   gap: 16px;
   margin-bottom: 16px;
   padding: 14px 18px;
@@ -30,6 +31,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 180px;
 }
 
 .order-context-primary {
@@ -69,58 +71,6 @@
   background: transparent;
   color: #fff;
   cursor: pointer;
-}
-
-.cart-order-summary {
-  margin-bottom: 16px;
-  padding: 12px 14px;
-  border-radius: 6px;
-  background: #3a3a3a;
-  border: 1px solid #5b5b5b;
-}
-
-.cart-summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  padding: 3px 0;
-}
-
-.cart-summary-primary {
-  margin-bottom: 6px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #5b5b5b;
-}
-
-.cart-summary-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #9ca3af;
-  flex-shrink: 0;
-}
-
-.cart-summary-value {
-  font-size: 0.92rem;
-  color: #f3f4f6;
-  text-align: right;
-  word-break: break-word;
-}
-
-.cart-summary-primary .cart-summary-label {
-  color: #c7d8bd;
-}
-
-.cart-summary-primary .cart-summary-value {
-  font-size: 1rem;
-  color: #ffffff;
-}
-
-.cart-delivery-point {
-  margin-bottom: 14px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #5b5b5b;
 }
 
 /* =========================
