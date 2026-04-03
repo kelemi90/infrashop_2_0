@@ -7,6 +7,76 @@
   gap: 24px;
 }
 
+.order-context-bar,
+.order-success-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  background: #3e4b3d;
+  border: 1px solid #6f8c61;
+}
+
+.order-context-bar {
+  position: sticky;
+  top: 12px;
+  z-index: 2;
+}
+
+.order-context-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-context-primary {
+  min-width: 220px;
+}
+
+.order-context-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #c7d8bd;
+}
+
+.order-success-card h3 {
+  margin: 0 0 6px 0;
+}
+
+.order-success-card p {
+  margin: 0;
+}
+
+.order-success-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.order-success-link {
+  text-decoration: none;
+  text-align: center;
+}
+
+.order-success-dismiss {
+  padding: 10px 14px;
+  border: 1px solid #8ea980;
+  border-radius: 4px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+
+.cart-delivery-point {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #5b5b5b;
+}
+
 /* =========================
    Products Section
 ========================= */
@@ -98,10 +168,30 @@
   margin: 0 0 10px 0;
 }
 
+.order-extra-section {
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid #5b5b5b;
+  border-radius: 4px;
+  background: #3f3f3f;
+}
+
+.order-extra-heading {
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9bd7ff;
+}
+
 .order-extra-label {
   display: block;
-  margin-bottom: 10px;
   font-size: 0.95rem;
+}
+
+.order-extra-question {
+  display: block;
 }
 
 .order-extra-label textarea {
@@ -213,4 +303,26 @@
 
 .product-details input[type="number"] {
   width: 80px;
+}
+
+@media (max-width: 900px) {
+  .order-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .order-context-bar,
+  .order-success-card {
+    position: static;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .order-success-actions {
+    width: 100%;
+  }
+
+  .order-success-link,
+  .order-success-dismiss {
+    width: 100%;
+  }
 }
