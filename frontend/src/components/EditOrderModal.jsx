@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
+import buildImageUrl from '../utils/imageUrl';
+import '../styles/edit-order-modal.css';
 
 export default function EditOrderModal({ orderId, onClose, onSaved }) {
   const [order, setOrder] = useState(null);
@@ -28,7 +30,14 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
         // remember original name to require confirmation when editing
         setOriginalName((res.data.order && res.data.order.customer_name) || '');
         // map items to editable shape
-        setItems(res.data.items.map(i => ({ item_id: i.item_id, quantity: i.quantity, name: i.item_name || i.name })));
+        setItems(res.data.items.map(i => ({
+          item_id: i.item_id,
+          quantity: i.quantity,
+          name: i.item_name || i.name,
+          thumbnail_url: i.thumbnail_url || i.image_url,
+          short_description: i.short_description,
+          sku: i.sku,
+        })));
       })
       .catch(err => setError(err.response?.data?.error || 'Virhe haettaessa tilausta'));
 
@@ -101,23 +110,30 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
   };
 
   return (
-    <div style={{ position: 'fixed', left:0,top:0,right:0,bottom:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ background:'#fff', padding:20, width:800, maxHeight:'80%', overflow:'auto' }}>
-        <h3>Muokkaa tilausta #{orderId}</h3>
-        {error && <p style={{ color:'red' }}>{error}</p>}
+    <div className="eom-backdrop">
+      <div className="eom-dialog">
+        <h3 className="eom-title">Muokkaa tilausta #{orderId}</h3>
+        {error && <p className="eom-error">{error}</p>}
 
-        <div>
-          <label> Asiakas: <input value={order?.customer_name||''} onChange={e => setOrder({...order, customer_name: e.target.value})} /> </label>
+        <div className="eom-field">
+          <label className="eom-label">
+            Asiakas
+            <input
+              className="eom-input"
+              value={order?.customer_name || ''}
+              onChange={e => setOrder({ ...order, customer_name: e.target.value })}
+            />
+          </label>
           {originalName && (
-            <div style={{ fontSize:12, color:'#666', marginTop:6 }}>
+            <div className="eom-hint">
               Syötä tilaajan nimi täsmälleen kuten tilauksessa ennen tallennusta: <strong>"{originalName}"</strong>
             </div>
           )}
         </div>
 
         {requirements && (
-          <div style={{ marginTop: 10, padding: 10, border: '1px solid #eee', borderRadius: 6, background: '#fafafa' }}>
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>Lisätiedot tilaukseen</div>
+          <div className="eom-requirements">
+            <div className="eom-requirements-title">Lisätiedot tilaukseen</div>
             {requirements.power && <div><strong>Sähköt:</strong> {requirements.power}</div>}
             {requirements.network && <div><strong>Verkko:</strong> {requirements.network}</div>}
             {requirements.lighting && <div><strong>Valaistus:</strong> {requirements.lighting}</div>}
@@ -125,35 +141,64 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
           </div>
         )}
 
-        <h4>Rivit</h4>
-        <div style={{ marginBottom: 8 }}>
-          <select value={selectedAdd} onChange={e => setSelectedAdd(e.target.value)}>
+        <h4 className="eom-section-title">Tilatut tuotteet</h4>
+
+        <div className="eom-add-row">
+          <select className="eom-select" value={selectedAdd} onChange={e => setSelectedAdd(e.target.value)}>
             <option value="">-- Lisää tuote --</option>
             {availableItems.map(ai => (
               <option key={ai.id} value={ai.id}>{ai.name} (var: {ai.available_stock})</option>
             ))}
           </select>
-          <button onClick={addLine} style={{ marginLeft: 8 }}>Lisää</button>
+          <button className="eom-btn" onClick={addLine}>Lisää</button>
         </div>
 
-        {items.map((it, idx) => {
-          const ai = availableItems.find(a => a.id === it.item_id);
-          const available = ai ? ai.available_stock : null;
-          return (
-            <div key={idx} style={{ display:'flex', gap:8, alignItems:'center', marginBottom:8 }}>
-              <div style={{ flex:1 }}>
-                {it.name || it.item_id}
-                {available !== null && <div style={{ fontSize:12, color:'#666' }}>Varastossa vapaita: {available}</div>}
+        <div className="eom-items-list">
+          {items.map((it, idx) => {
+            const ai = availableItems.find(a => a.id === it.item_id);
+            const available = ai ? ai.available_stock : null;
+            const thumb = it.thumbnail_url || (ai && (ai.thumbnail_url || ai.image_url));
+            return (
+              <div key={idx} className="eom-item-row">
+                <img
+                  className="eom-item-thumb"
+                  src={buildImageUrl(thumb)}
+                  alt={it.name || ''}
+                  onError={e => { e.currentTarget.src = buildImageUrl(null); }}
+                />
+                <div className="eom-item-info">
+                  <div className="eom-item-name">{it.name || `#${it.item_id}`}</div>
+                  {it.sku && <div className="eom-item-meta">SKU: {it.sku}</div>}
+                  {it.short_description && <div className="eom-item-meta">{it.short_description}</div>}
+                  {available !== null && (
+                    <div className="eom-item-meta">Vapaana varastossa: {available} kpl</div>
+                  )}
+                </div>
+                <div className="eom-item-qty">
+                  <label className="eom-qty-label">Määrä</label>
+                  <input
+                    className="eom-qty-input"
+                    type="number"
+                    min="0"
+                    value={it.quantity}
+                    onChange={e => updateQty(idx, e.target.value)}
+                  />
+                </div>
+                <button className="eom-btn eom-btn-danger" onClick={() => removeLine(idx)}>Poista</button>
               </div>
-              <input type="number" min="0" value={it.quantity} onChange={e => updateQty(idx, e.target.value)} style={{ width:80 }} />
-              <button onClick={() => removeLine(idx)}>Poista</button>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
 
-        <div style={{ marginTop: 12 }}>
-          <button onClick={submit} disabled={Boolean(originalName && ((order?.customer_name||'').trim() !== originalName.trim()))}>Tallenna</button>
-          <button onClick={onClose} style={{ marginLeft:8 }}>Peruuta</button>
+        <div className="eom-actions">
+          <button
+            className="eom-btn eom-btn-primary"
+            onClick={submit}
+            disabled={Boolean(originalName && ((order?.customer_name || '').trim() !== originalName.trim()))}
+          >
+            Tallenna
+          </button>
+          <button className="eom-btn" onClick={onClose}>Peruuta</button>
         </div>
       </div>
     </div>

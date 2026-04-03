@@ -1,0 +1,249 @@
+/* EditOrderModal styles */
+
+.eom-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.eom-dialog {
+  background: #1f2933;
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 28px;
+  width: 840px;
+  max-width: 96vw;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.eom-title {
+  margin: 0 0 20px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.eom-error {
+  background: #7f1d1d;
+  color: #fecaca;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+}
+
+/* Customer field */
+.eom-field {
+  margin-bottom: 16px;
+}
+
+.eom-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #d1d5db;
+}
+
+.eom-input {
+  margin-top: 4px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  border: 1px solid #374151;
+  background: #111827;
+  color: #e5e7eb;
+  font-size: 0.95rem;
+  width: 280px;
+}
+
+.eom-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.eom-hint {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+/* Special requirements box */
+.eom-requirements {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  background: #111827;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.eom-requirements-title {
+  font-weight: 600;
+  color: #d1d5db;
+  margin-bottom: 6px;
+}
+
+/* Section heading */
+.eom-section-title {
+  margin: 18px 0 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #d1d5db;
+  border-bottom: 1px solid #374151;
+  padding-bottom: 6px;
+}
+
+/* Add-item row */
+.eom-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.eom-select {
+  flex: 1;
+  max-width: 400px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  border: 1px solid #374151;
+  background: #111827;
+  color: #e5e7eb;
+  font-size: 0.9rem;
+}
+
+.eom-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* Items list */
+.eom-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.eom-item-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 6px;
+}
+
+.eom-item-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: #374151;
+}
+
+.eom-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.eom-item-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #f3f4f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eom-item-meta {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+/* Quantity control */
+.eom-item-qty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.eom-qty-label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.eom-qty-input {
+  width: 72px;
+  padding: 6px 8px;
+  text-align: center;
+  border-radius: 4px;
+  border: 1px solid #374151;
+  background: #1f2933;
+  color: #e5e7eb;
+  font-size: 0.95rem;
+}
+
+.eom-qty-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* Buttons */
+.eom-btn {
+  padding: 7px 16px;
+  border-radius: 4px;
+  border: none;
+  background: #374151;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.eom-btn:hover {
+  background: #4b5563;
+}
+
+.eom-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.eom-btn-primary {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.eom-btn-primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.eom-btn-danger {
+  background: #b91c1c;
+  color: #ffffff;
+}
+
+.eom-btn-danger:hover {
+  background: #991b1b;
+}
+
+/* Footer actions */
+.eom-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 4px;
+}
