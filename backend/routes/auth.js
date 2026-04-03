@@ -9,10 +9,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'replace-me';
 
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
-    const identifier = String(email || '').trim();
+    const normalizedEmail = String(email || '').trim();
     const r = await db.query(
-        'SELECT * FROM users WHERE LOWER(email)=LOWER($1) OR LOWER(display_name)=LOWER($1) LIMIT 1',
-        [identifier]
+        'SELECT * FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1',
+        [normalizedEmail]
     );
     if (!r.rows.length) return res.status(401).json({ error: 'Invalid credentials' });
     const user = r.rows[0];
