@@ -100,7 +100,7 @@ export default function HomePage() {
           }
 
           return (
-            <div key={card.key} className="home-card" style={{ cursor: 'pointer' }} onClick={card.onClick}>
+            <div key={card.key} className="home-card home-card-clickable" onClick={card.onClick}>
               <h2>{card.title}</h2>
               <p>{card.description}</p>
             </div>

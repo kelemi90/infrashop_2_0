@@ -38,9 +38,9 @@ export default function RequireAdmin({ children }) {
   const msg = !user ? 'Please login — redirecting to login page' : (user.role !== 'admin' ? 'Admin access required — redirecting to archive' : 'Preparing...');
 
   return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh' }}>
-      <div style={{ padding:20, border:'1px solid #ddd', borderRadius:6, background:'#fff' }}>
-        <p style={{ margin:0 }}>{msg}</p>
+    <div className="require-admin-wrap">
+      <div className="require-admin-card">
+        <p className="require-admin-message">{msg}</p>
       </div>
     </div>
   );

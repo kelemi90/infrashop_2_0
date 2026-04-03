@@ -46,14 +46,14 @@ export default function Header() {
       <div className="header-right">
         <span className="page-title">{getPageTitle()}</span>
         {user ? (
-          <div style={{ marginLeft: 12 }}>
-            <span style={{ marginRight: 8 }}>{user.display_name || user.email || user.id}</span>
+          <div className="header-user-wrap">
+            <span className="header-user-name">{user.display_name || user.email || user.id}</span>
             <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }}>
               Logout
             </button>
           </div>
         ) : (
-          <Link to="/login" style={{ marginLeft: 12 }}>Login</Link>
+          <Link to="/login" className="header-login-link">Login</Link>
         )}
       </div>
       {showQuickCreate && (

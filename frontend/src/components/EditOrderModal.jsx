@@ -101,23 +101,23 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
   };
 
   return (
-    <div style={{ position: 'fixed', left:0,top:0,right:0,bottom:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ background:'#fff', padding:20, width:800, maxHeight:'80%', overflow:'auto' }}>
+    <div className="edit-order-modal-overlay">
+      <div className="edit-order-modal">
         <h3>Muokkaa tilausta #{orderId}</h3>
-        {error && <p style={{ color:'red' }}>{error}</p>}
+        {error && <p className="edit-order-modal-error">{error}</p>}
 
         <div>
           <label> Asiakas: <input value={order?.customer_name||''} onChange={e => setOrder({...order, customer_name: e.target.value})} /> </label>
           {originalName && (
-            <div style={{ fontSize:12, color:'#666', marginTop:6 }}>
+            <div className="edit-order-modal-hint">
               Syötä tilaajan nimi täsmälleen kuten tilauksessa ennen tallennusta: <strong>"{originalName}"</strong>
             </div>
           )}
         </div>
 
         {requirements && (
-          <div style={{ marginTop: 10, padding: 10, border: '1px solid #eee', borderRadius: 6, background: '#fafafa' }}>
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>Lisatiedot tilaukseen</div>
+          <div className="edit-order-modal-requirements">
+            <div className="edit-order-modal-requirements-title">Lisatiedot tilaukseen</div>
             {requirements.power && <div><strong>Sähköt:</strong> {requirements.power}</div>}
             {requirements.network && <div><strong>Verkko:</strong> {requirements.network}</div>}
             {requirements.lighting && <div><strong>Valaistus:</strong> {requirements.lighting}</div>}
@@ -125,34 +125,34 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
         )}
 
         <h4>Rivit</h4>
-        <div style={{ marginBottom: 8 }}>
+        <div className="edit-order-modal-toolbar">
           <select value={selectedAdd} onChange={e => setSelectedAdd(e.target.value)}>
             <option value="">-- Lisää tuote --</option>
             {availableItems.map(ai => (
               <option key={ai.id} value={ai.id}>{ai.name} (var: {ai.available_stock})</option>
             ))}
           </select>
-          <button onClick={addLine} style={{ marginLeft: 8 }}>Lisää</button>
+          <button onClick={addLine} className="edit-order-modal-add-btn">Lisää</button>
         </div>
 
         {items.map((it, idx) => {
           const ai = availableItems.find(a => a.id === it.item_id);
           const available = ai ? ai.available_stock : null;
           return (
-            <div key={idx} style={{ display:'flex', gap:8, alignItems:'center', marginBottom:8 }}>
-              <div style={{ flex:1 }}>
+            <div key={idx} className="edit-order-modal-row">
+              <div className="edit-order-modal-row-name">
                 {it.name || it.item_id}
-                {available !== null && <div style={{ fontSize:12, color:'#666' }}>Varastossa vapaita: {available}</div>}
+                {available !== null && <div className="edit-order-modal-stock">Varastossa vapaita: {available}</div>}
               </div>
-              <input type="number" min="0" value={it.quantity} onChange={e => updateQty(idx, e.target.value)} style={{ width:80 }} />
+              <input type="number" min="0" value={it.quantity} onChange={e => updateQty(idx, e.target.value)} className="edit-order-modal-qty" />
               <button onClick={() => removeLine(idx)}>Poista</button>
             </div>
           );
         })}
 
-        <div style={{ marginTop: 12 }}>
+        <div className="edit-order-modal-actions">
           <button onClick={submit} disabled={Boolean(originalName && ((order?.customer_name||'').trim() !== originalName.trim()))}>Tallenna</button>
-          <button onClick={onClose} style={{ marginLeft:8 }}>Peruuta</button>
+          <button onClick={onClose} className="edit-order-modal-cancel-btn">Peruuta</button>
         </div>
       </div>
     </div>

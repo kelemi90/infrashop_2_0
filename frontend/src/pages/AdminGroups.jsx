@@ -22,22 +22,22 @@ export default function AdminGroups() {
   }, []);
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className="admin-page">
+      <div className="admin-topbar">
         <h2>Muokkaa tuoteryhmiä</h2>
         {user && user.role === 'admin' && (
           <div>
-            <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }} style={{ background: '#c62828', color: '#fff', border: 'none', padding: '6px 10px', borderRadius:4, cursor:'pointer' }}>
+            <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }} className="admin-logout-btn">
               Logout
             </button>
           </div>
         )}
       </div>
 
-      <div style={{ marginBottom: 8 }}>
+      <div className="admin-create-row">
         <input placeholder="Group name" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} />
-        <input placeholder="Description" value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} style={{ marginLeft: 8 }} />
-        <button style={{ marginLeft: 8 }} onClick={async () => {
+        <input placeholder="Description" value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} className="admin-ml8" />
+        <button className="admin-ml8" onClick={async () => {
           try {
             const res = await api.post('/item-groups', { name: newGroupName, description: newGroupDesc });
             setItemGroups(prev => [...prev, res.data]);
@@ -46,14 +46,14 @@ export default function AdminGroups() {
         }}>Create group</button>
       </div>
 
-      <div style={{ display: 'flex', gap: 20 }}>
-        <div style={{ minWidth: 260 }}>
+      <div className="admin-groups-layout">
+        <div className="admin-groups-sidebar">
           <h4>Groups</h4>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="admin-list-reset">
             {itemGroups.map(g => (
-              <li key={g.id} style={{ marginBottom: 6 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <button style={{ flex: 1, textAlign: 'left' }} onClick={() => navigate(`/admin/groups/${g.id}/edit`)}>{g.name}</button>
+              <li key={g.id} className="admin-list-item-gap">
+                <div className="admin-list-row">
+                  <button className="admin-list-main-btn" onClick={() => navigate(`/admin/groups/${g.id}/edit`)}>{g.name}</button>
                   <button onClick={async () => {
                     setEditingGroupId(g.id);
                     try {
@@ -62,7 +62,7 @@ export default function AdminGroups() {
                     } catch (err) { console.error(err); }
                   }}>Inline edit</button>
                   <button
-                    style={{ background: '#b91c1c', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: 4, cursor: 'pointer' }}
+                    className="admin-danger-btn"
                     onClick={async () => {
                       const ok = window.confirm(`Poistetaanko tuoteryhma \"${g.name}\"?`);
                       if (!ok) return;
@@ -87,7 +87,7 @@ export default function AdminGroups() {
           </ul>
         </div>
 
-        <div style={{ flex: 1 }}>
+        <div className="admin-groups-content">
           {editingGroupId ? (
             <div>
               <h4>Edit group items</h4>

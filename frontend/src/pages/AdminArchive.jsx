@@ -91,12 +91,12 @@ export default function AdminArchive() {
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className="admin-page">
+      <div className="admin-topbar">
         <h2>Admin – Arkisto</h2>
         {user && user.role === 'admin' && (
           <div>
-            <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }} style={{ background: '#c62828', color: '#fff', border: 'none', padding: '6px 10px', borderRadius:4, cursor:'pointer' }}>
+            <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }} className="admin-logout-btn">
               Logout
             </button>
           </div>
@@ -104,32 +104,24 @@ export default function AdminArchive() {
       </div>
 
       {message && (
-        <div style={{ marginBottom: 10, color: 'green' }}>
+        <div className="admin-success-msg">
           {message}
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 30 }}>
+      <div className="admin-layout">
         {/* Tapahtumavalinta */}
-        <div style={{ minWidth: 250 }}>
+        <div className="admin-events-column">
           <h3>Tapahtumat</h3>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="admin-list-reset">
             {events.map(ev => (
               <li key={ev.id}>
                 <button
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: 8,
-                    marginBottom: 4,
-                    background: selectedEvent?.id === ev.id ? '#e0e0e0' : '#fff',
-                    border: '1px solid #ccc',
-                    cursor: 'pointer'
-                  }}
+                  className={`admin-event-btn ${selectedEvent?.id === ev.id ? 'admin-event-btn-active' : ''}`}
                   onClick={() => setSelectedEvent(ev)}
                 >
                   <strong>{ev.name}</strong><br />
-                  <span style={{ fontSize: 12, color: '#666' }}>
+                  <span className="admin-event-dates">
                     {ev.start_date?.slice(0, 10)} – {ev.end_date?.slice(0, 10)}
                   </span>
                 </button>
@@ -139,7 +131,7 @@ export default function AdminArchive() {
         </div>
 
         {/* Tapahtuman sisältö */}
-        <div style={{ flex: 1 }}>
+        <div className="admin-content-column">
           {!selectedEvent && (
             <div>Valitse tapahtuma nähdäksesi arkistoidut tilaukset</div>
           )}
@@ -152,14 +144,7 @@ export default function AdminArchive() {
 
               <button
                 onClick={returnItemsToStock}
-                style={{
-                  marginBottom: 12,
-                  background: '#c62828',
-                  color: '#fff',
-                  padding: '8px 12px',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
+                className="admin-return-btn"
               >
                 Palauta kaikki tavarat varastoon
               </button>
@@ -167,7 +152,7 @@ export default function AdminArchive() {
               {groupedItems.length === 0 ? (
                 <div>Ei aktiivisia tilauksia</div>
               ) : (
-                <table width="100%" border="1" cellPadding="6" style={{ borderCollapse: 'collapse' }}>
+                <table width="100%" border="1" cellPadding="6" className="admin-table">
                   <thead>
                     <tr>
                       <th align="left">Tuote</th>
@@ -192,10 +177,10 @@ export default function AdminArchive() {
           <hr />
 
           <h3>Item groups (Admin)</h3>
-          <div style={{ marginBottom: 8 }}>
+          <div className="admin-create-row">
             <input placeholder="Group name" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} />
-            <input placeholder="Description" value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} style={{ marginLeft: 8 }} />
-            <button style={{ marginLeft: 8 }} onClick={async () => {
+            <input placeholder="Description" value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} className="admin-ml8" />
+            <button className="admin-ml8" onClick={async () => {
               try {
                 const res = await api.post('/item-groups', { name: newGroupName, description: newGroupDesc });
                 setItemGroups(prev => [...prev, res.data]);
@@ -204,14 +189,14 @@ export default function AdminArchive() {
             }}>Create group</button>
           </div>
 
-          <div style={{ display: 'flex', gap: 20 }}>
-            <div style={{ minWidth: 260 }}>
+          <div className="admin-groups-layout">
+            <div className="admin-groups-sidebar">
               <h4>Groups</h4>
-              <ul style={{ listStyle: 'none', padding: 0 }}>
+              <ul className="admin-list-reset">
                 {itemGroups.map(g => (
-                  <li key={g.id} style={{ marginBottom: 6 }}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <button style={{ flex: 1, textAlign: 'left' }} onClick={() => navigate(`/admin/groups/${g.id}/edit`)}>{g.name}</button>
+                  <li key={g.id} className="admin-list-item-gap">
+                    <div className="admin-list-row">
+                      <button className="admin-list-main-btn" onClick={() => navigate(`/admin/groups/${g.id}/edit`)}>{g.name}</button>
                       <button onClick={async () => {
                         // quick inline edit shortcut (keeps previous behavior)
                         setEditingGroupId(g.id);
@@ -226,19 +211,19 @@ export default function AdminArchive() {
               </ul>
             </div>
 
-            <div style={{ flex: 1 }}>
+            <div className="admin-groups-content">
               {editingGroupId ? (
                 <div>
                   <h4>Edit group items</h4>
-                  <div style={{ marginBottom: 8 }}>
+                  <div className="admin-create-row">
                     <select value={selectedAddItem} onChange={e => setSelectedAddItem(e.target.value)}>
                       <option value="">-- Valitse tuote --</option>
                       {allItems.map(ai => (
                         <option key={ai.id} value={ai.id}>{ai.name} (var: {ai.available_stock})</option>
                       ))}
                     </select>
-                    <input type="number" min="1" value={selectedAddQty} onChange={e => setSelectedAddQty(Number(e.target.value))} style={{ width:80, marginLeft:8 }} />
-                    <button style={{ marginLeft:8 }} onClick={() => {
+                    <input type="number" min="1" value={selectedAddQty} onChange={e => setSelectedAddQty(Number(e.target.value))} className="admin-qty-input admin-ml8" />
+                    <button className="admin-ml8" onClick={() => {
                       if (!selectedAddItem) return;
                       const iid = Number(selectedAddItem);
                       const existing = editingGroupItems.find(x => x.item_id === iid);
@@ -253,22 +238,22 @@ export default function AdminArchive() {
 
                   <div>
                     {editingGroupItems.map((it, idx) => (
-                      <div key={idx} style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
-                        <div style={{ flex:1 }}>{it.name}</div>
-                        <input type="number" min="1" value={it.quantity} onChange={e => { const copy = [...editingGroupItems]; copy[idx].quantity = Number(e.target.value); setEditingGroupItems(copy); }} style={{ width:80 }} />
+                      <div key={idx} className="admin-list-row admin-list-item-gap">
+                        <div className="admin-list-main-btn-like">{it.name}</div>
+                        <input type="number" min="1" value={it.quantity} onChange={e => { const copy = [...editingGroupItems]; copy[idx].quantity = Number(e.target.value); setEditingGroupItems(copy); }} className="admin-qty-input" />
                         <button onClick={() => { setEditingGroupItems(prev => prev.filter((_,i)=>i!==idx)); }}>Remove</button>
                       </div>
                     ))}
                   </div>
 
-                  <div style={{ marginTop:10 }}>
+                  <div className="admin-mt10">
                     <button onClick={async () => {
                       try {
                         await api.post(`/item-groups/${editingGroupId}/items`, { items: editingGroupItems.map(i=>({ item_id: i.item_id, quantity: i.quantity })) });
                         alert('Saved');
                       } catch (err) { console.error(err); alert(err.response?.data?.error || 'Save failed'); }
                     }}>Save group items</button>
-                    <button style={{ marginLeft:8 }} onClick={() => { setEditingGroupId(null); setEditingGroupItems([]); }}>Close</button>
+                    <button className="admin-ml8" onClick={() => { setEditingGroupId(null); setEditingGroupItems([]); }}>Close</button>
                   </div>
                 </div>
               ) : (

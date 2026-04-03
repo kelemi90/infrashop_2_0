@@ -45,36 +45,28 @@ export default function ArchivePage() {
   }, [selectedEvent]);
 
   return (
-    <div>
+    <div className="archive-page">
       <h2>Arkisto</h2>
 
-      <div style={{ display: 'flex', gap: 30 }}>
-        <div style={{ minWidth: 250 }}>
+      <div className="archive-layout">
+        <div className="archive-events-column">
           <h3>Tapahtumat</h3>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="archive-events-list">
             {events.map(ev => (
               <li key={ev.id}>
                 <button
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: 8,
-                    marginBottom: 4,
-                    background: selectedEvent?.id === ev.id ? '#e0e0e0' : '#fff',
-                    border: '1px solid #ccc',
-                    cursor: 'pointer'
-                  }}
+                  className={`archive-event-btn ${selectedEvent?.id === ev.id ? 'archive-event-btn-active' : ''}`}
                   onClick={() => setSelectedEvent(ev)}
                 >
                   <strong>{ev.name}</strong><br />
-                  <span style={{ fontSize: 12, color: '#666' }}>{ev.start_date?.slice(0,10)} – {ev.end_date?.slice(0,10)}</span>
+                  <span className="archive-event-dates">{ev.start_date?.slice(0,10)} – {ev.end_date?.slice(0,10)}</span>
                 </button>
               </li>
             ))}
           </ul>
         </div>
 
-        <div style={{ flex: 1 }}>
+        <div className="archive-content-column">
           {!selectedEvent && (
             <div>Valitse tapahtuma nähdäksesi arkistoidut tilaukset</div>
           )}
@@ -88,7 +80,7 @@ export default function ArchivePage() {
               {groupedItems.length === 0 ? (
                 <div>Ei aktiivisia tilauksia</div>
               ) : (
-                <table width="100%" border="1" cellPadding="6" style={{ borderCollapse: 'collapse' }}>
+                <table width="100%" border="1" cellPadding="6" className="archive-table">
                   <thead>
                     <tr>
                       <th align="left">Tuote</th>
