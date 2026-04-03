@@ -67,7 +67,7 @@ export default function OrdersPage(){
                                 <a href={`/api/orders/${o.id}/pdf`} target="_blank" rel="noopener noreferrer">
                                     Lataa PDF
                                 </a>
-                                <button onClick={() => setEditingOrder(o.id)}>Muokkaa tilausta</button>
+                                <button onClick={() => setEditingOrder({ id: o.id, customerName: o.customer_name })}>Muokkaa tilausta</button>
                                                                 {isAdmin && (
                                                                     <button className="danger-btn" onClick={() => deleteOrder(o.id)}>
                                                                         Poista
@@ -79,7 +79,12 @@ export default function OrdersPage(){
                 </tbody>
             </table>
             {editingOrder && (
-                            <EditOrderModal orderId={editingOrder} onClose={() => setEditingOrder(null)} onSaved={() => { setEditingOrder(null); loadOrders(); }} />
+                            <EditOrderModal
+                                orderId={editingOrder.id}
+                                customerName={editingOrder.customerName}
+                                onClose={() => setEditingOrder(null)}
+                                onSaved={() => { setEditingOrder(null); loadOrders(); }}
+                            />
             )}
         </div>
     );

@@ -3,9 +3,8 @@ import api from '../api';
 import buildImageUrl from '../utils/imageUrl';
 import '../styles/edit-order-modal.css';
 
-export default function EditOrderModal({ orderId, onClose, onSaved }) {
+export default function EditOrderModal({ orderId, customerName, onClose, onSaved }) {
   const [order, setOrder] = useState(null);
-  const [originalName, setOriginalName] = useState('');
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
   const [availableItems, setAvailableItems] = useState([]);
@@ -23,12 +22,12 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
 
   useEffect(() => {
     if (!orderId) return;
-    // fetch order details (requires auth)
-    api.get(`/orders/${orderId}`)
+    // fetch order details; unauthenticated flow can read by matching customer_name
+    api.get(`/orders/${orderId}`, {
+      params: customerName ? { customer_name: customerName } : undefined,
+    })
       .then(res => {
         setOrder(res.data.order);
-        // remember original name to require confirmation when editing
-        setOriginalName((res.data.order && res.data.order.customer_name) || '');
         // map items to editable shape
         setItems(res.data.items.map(i => ({
           item_id: i.item_id,
@@ -43,7 +42,7 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
 
     // also fetch available items for adding lines
     api.get('/items').then(r => setAvailableItems(r.data)).catch(() => {});
-  }, [orderId]);
+  }, [orderId, customerName]);
 
   if (!orderId) return null;
 
@@ -92,13 +91,6 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
 
   const submit = async () => {
     setError('');
-    // require editor to type the exact original customer name (trimmed)
-    const typed = (order?.customer_name || '').trim();
-    const orig = (originalName || '').trim();
-    if (orig && typed !== orig) {
-      setError(`Vahvista tilausta kirjoittamalla tilaajan nimi täsmälleen kuten tilauksessa: "${orig}"`);
-      return;
-    }
     try {
       const payload = { items: items.map(i => ({ item_id: i.item_id, quantity: i.quantity })) };
       if (order.customer_name) payload.customer_name = order.customer_name;
@@ -124,11 +116,6 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
               onChange={e => setOrder({ ...order, customer_name: e.target.value })}
             />
           </label>
-          {originalName && (
-            <div className="eom-hint">
-              Syötä tilaajan nimi täsmälleen kuten tilauksessa ennen tallennusta: <strong>"{originalName}"</strong>
-            </div>
-          )}
         </div>
 
         {requirements && (
@@ -194,7 +181,6 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
           <button
             className="eom-btn eom-btn-primary"
             onClick={submit}
-            disabled={Boolean(originalName && ((order?.customer_name || '').trim() !== originalName.trim()))}
           >
             Tallenna
           </button>
