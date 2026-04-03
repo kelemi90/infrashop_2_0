@@ -5,8 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const sharp = require('sharp');
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'replace-me';
+const { requireCatalogManager } = require('../auth/roles');
 
 async function hydrateItemsWithImages(rows) {
   if (!rows || rows.length === 0) return rows;
@@ -107,20 +106,6 @@ async function generateSkuFromName(name) {
   }
 }
 
-function authAdmin(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'No auth' });
-  const token = authHeader.split(' ')[1];
-  try {
-    const user = jwt.verify(token, JWT_SECRET);
-    if (user.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
-    req.user = user;
-    next();
-  } catch (e) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-}
-
 // configure multer to store uploads in memory so we can validate/resize with sharp
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -169,7 +154,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/items/:id/image - upload one or more images for an item
-router.post('/:id/image', authAdmin, upload.fields([{ name: 'image', maxCount: 10 }, { name: 'images', maxCount: 10 }]), async (req, res) => {
+router.post('/:id/image', requireCatalogManager, upload.fields([{ name: 'image', maxCount: 10 }, { name: 'images', maxCount: 10 }]), async (req, res) => {
   try {
     const id = req.params.id;
     const files = getUploadedFiles(req);
@@ -231,8 +216,8 @@ router.post('/:id/image', authAdmin, upload.fields([{ name: 'image', maxCount: 1
 
 module.exports = router;
 
-// PUT /api/items/:id - update item (admin only)
-router.put('/:id', authAdmin, async (req, res) => {
+// PUT /api/items/:id - update item (catalog manager only)
+router.put('/:id', requireCatalogManager, async (req, res) => {
   try {
     const id = req.params.id;
     const { sku, name, short_description, total_stock, available_stock, category } = req.body;
@@ -261,8 +246,8 @@ router.put('/:id', authAdmin, async (req, res) => {
   }
 });
 
-// POST /api/items - create a new item (admin only)
-router.post('/', authAdmin, async (req, res) => {
+// POST /api/items - create a new item (catalog manager only)
+router.post('/', requireCatalogManager, async (req, res) => {
   try {
     const { sku, name, short_description, total_stock, available_stock, category } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });

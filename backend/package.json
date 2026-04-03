@@ -6,7 +6,9 @@
         "start": "node server.js",
         "dev": "nodemon server.js",
         "migrate:apply": "node scripts/apply_schema.js",
-        "create_admin": "node scripts/create_admin.js"
+        "create_user": "node scripts/create_admin.js",
+        "create_admin": "ADMIN_ROLE=admin node scripts/create_admin.js",
+        "create_moderator": "ADMIN_ROLE=moderator node scripts/create_admin.js"
     },
     "dependencies": {
         "bcrypt": "^6.0.0",

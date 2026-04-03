@@ -18,6 +18,7 @@ import ReportsPage from './pages/ReportsPage';
 import Layout from './components/Layout';
 import AdminEvents from './pages/AdminEvents';
 import GroupsPage from './pages/GroupsPage';
+import { ROLE_ADMIN, ROLE_MODERATOR } from './utils/roles';
 
 export default function App() {
   return (
@@ -36,12 +37,12 @@ export default function App() {
         {/* <Route path="/orders/:id/edit" element={<EditOrderPage />} /> */}
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/archive" element={<ArchivePage />} />
-        <Route path="/admin" element={<RequireAdmin><AdminGroups /></RequireAdmin>} />
+        <Route path="/admin" element={<RequireAdmin allowedRoles={[ROLE_ADMIN, ROLE_MODERATOR]}><AdminGroups /></RequireAdmin>} />
         <Route path="/admin/events" element={<RequireAdmin><AdminEvents /></RequireAdmin>} />
         <Route path="/admin/archive" element={<RequireAdmin><Admin /></RequireAdmin>} />
-        <Route path="/admin/items/images" element={<RequireAdmin><ItemImageEdit /></RequireAdmin>} />
-        <Route path="/admin/items/new" element={<RequireAdmin><NewItem /></RequireAdmin>} />
-        <Route path="/admin/groups/:id/edit" element={<RequireAdmin><GroupEdit /></RequireAdmin>} />
+        <Route path="/admin/items/images" element={<RequireAdmin allowedRoles={[ROLE_ADMIN, ROLE_MODERATOR]}><ItemImageEdit /></RequireAdmin>} />
+        <Route path="/admin/items/new" element={<RequireAdmin allowedRoles={[ROLE_ADMIN, ROLE_MODERATOR]}><NewItem /></RequireAdmin>} />
+        <Route path="/admin/groups/:id/edit" element={<RequireAdmin allowedRoles={[ROLE_ADMIN, ROLE_MODERATOR]}><GroupEdit /></RequireAdmin>} />
       </Route>
     </Routes>
   );

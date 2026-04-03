@@ -2,13 +2,14 @@ import { Link, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import React, { useState } from 'react';
 import QuickCreateItemModal from './QuickCreateItemModal';
 import '../styles/header.css';
+import { canManageCatalog } from '../utils/roles';
 
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const [showQuickCreate, setShowQuickCreate] = useState(false);
 
-  const userJson = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const userJson = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
   let user = null;
   try { user = userJson ? JSON.parse(userJson) : null; } catch (e) { user = null; }
 
@@ -33,7 +34,7 @@ export default function Header() {
         <Link to="/order">Tilaus</Link>
         <Link to="/orders">Tilaukset</Link>
         <Link to="/archive">Arkisto</Link>
-        {user && user.role === 'admin' && (
+        {canManageCatalog(user) && (
           <>
             <NavLink to="/admin">Muokkaa</NavLink>
             <NavLink to="/admin/items/images" className="admin-btn">Kuvat</NavLink>
@@ -48,7 +49,7 @@ export default function Header() {
         {user ? (
           <div style={{ marginLeft: 12 }}>
             <span style={{ marginRight: 8 }}>{user.display_name || user.email || user.id}</span>
-            <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }}>
+            <button onClick={() => { sessionStorage.removeItem('token'); sessionStorage.removeItem('user'); navigate('/'); }}>
               Logout
             </button>
           </div>

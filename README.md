@@ -199,8 +199,8 @@ This project now includes a small, portable helper that runs the admin creation 
 Usage (non-interactive):
 
 ```bash
-# defaults admin
-./scripts/run_create_admin.sh
+# explicit credentials are required
+./scripts/run_create_admin.sh --email admin@example.com --password 'strong-password'
 
 # specify credentials
 ./scripts/run_create_admin.sh --email admin@example.com --password S3cret --display 'Site Admin'

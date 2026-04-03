@@ -1,20 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'replace-me';
-
-function auth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'No auth' });
-  const token = authHeader.split(' ')[1];
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch (e) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-}
+const { requireCatalogManager } = require('../auth/roles');
 
 // list groups
 router.get('/', async (req, res) => {
@@ -33,9 +20,8 @@ router.get('/:id/items', async (req, res) => {
   res.json(r.rows);
 });
 
-// Create a new item group (admin only)
-router.post('/', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Ei oikeuksia' });
+// Create a new item group (catalog manager only)
+router.post('/', requireCatalogManager, async (req, res) => {
   const { name, description, image_url } = req.body;
   if (!name) return res.status(400).json({ error: 'Name required' });
   try {
@@ -47,9 +33,8 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Set items for a group (replace existing) (admin only)
-router.post('/:id/items', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Ei oikeuksia' });
+// Set items for a group (replace existing) (catalog manager only)
+router.post('/:id/items', requireCatalogManager, async (req, res) => {
   const groupId = parseInt(req.params.id, 10);
   const { items } = req.body; // [{ item_id, quantity }, ...]
   if (!Array.isArray(items)) return res.status(400).json({ error: 'Items array required' });
@@ -85,9 +70,8 @@ router.post('/:id/items', auth, async (req, res) => {
   }
 });
 
-// Delete an item group (admin only)
-router.delete('/:id', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Ei oikeuksia' });
+// Delete an item group (catalog manager only)
+router.delete('/:id', requireCatalogManager, async (req, res) => {
   const groupId = parseInt(req.params.id, 10);
   if (!groupId) return res.status(400).json({ error: 'Invalid group id' });
 
