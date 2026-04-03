@@ -166,11 +166,17 @@ export default function ItemImageEdit(){
                   </div>
 
                   <div className="edit-row">
-                    <div className="edit-label">Yhteensä:</div>
+                    <div className="edit-label">
+                      Varastossa yhteensä:
+                      <div style={{ fontSize:'0.75rem', color:'#aaa', fontWeight:'normal' }}>Fyysinen kokonaismäärä</div>
+                    </div>
                     <div className="edit-field small">
                       <input type="number" value={editValues.total_stock} onChange={e=>setEditValues(v=>({...v, total_stock: Number(e.target.value) }))} />
                     </div>
-                    <div className="edit-label">Saatavilla:</div>
+                    <div className="edit-label">
+                      Varattavissa:
+                      <div style={{ fontSize:'0.75rem', color:'#aaa', fontWeight:'normal' }}>Ei varattuna tilauksiin</div>
+                    </div>
                     <div className="edit-field small">
                       <input type="number" value={editValues.available_stock} onChange={e=>setEditValues(v=>({...v, available_stock: Number(e.target.value) }))} />
                     </div>

@@ -63,11 +63,15 @@ export default function NewItem(){
             <textarea value={shortDescription} onChange={e=>setShortDescription(e.target.value)} />
           </label>
         </div>
-        <div className="new-item-stock-row">
-          <label>Yhteensä varastossa<br/>
+        <div style={{ display:'flex', gap:12, marginBottom:8 }}>
+          <label>
+            Varastossa yhteensä<br/>
+            <small style={{ color:'#999', fontWeight:'normal' }}>Fyysinen kokonaismäärä</small><br/>
             <input type="number" value={totalStock} onChange={e=>setTotalStock(e.target.value)} />
           </label>
-          <label>Saatavilla<br/>
+          <label>
+            Varattavissa<br/>
+            <small style={{ color:'#999', fontWeight:'normal' }}>Ei varattuna tilauksiin</small><br/>
             <input type="number" value={availableStock} onChange={e=>setAvailableStock(e.target.value)} />
           </label>
         </div>

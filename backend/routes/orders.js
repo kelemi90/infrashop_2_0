@@ -362,7 +362,7 @@ router.get('/:id', async (req, res) => {
   }
 
   const itemsRes = await db.query(
-    `SELECT oi.*, i.name, i.sku, i.image_url, i.short_description
+    `SELECT oi.*, i.name, i.sku, i.image_url, i.thumbnail_url, i.short_description
      FROM order_items oi
      LEFT JOIN items i ON i.id = oi.item_id
      WHERE oi.order_id=$1

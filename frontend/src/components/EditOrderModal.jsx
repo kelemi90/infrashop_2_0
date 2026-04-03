@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
+import buildImageUrl from '../utils/imageUrl';
+import '../styles/edit-order-modal.css';
 
 export default function EditOrderModal({ orderId, onClose, onSaved }) {
   const [order, setOrder] = useState(null);
@@ -28,7 +30,14 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
         // remember original name to require confirmation when editing
         setOriginalName((res.data.order && res.data.order.customer_name) || '');
         // map items to editable shape
-        setItems(res.data.items.map(i => ({ item_id: i.item_id, quantity: i.quantity, name: i.item_name || i.name })));
+        setItems(res.data.items.map(i => ({
+          item_id: i.item_id,
+          quantity: i.quantity,
+          name: i.item_name || i.name,
+          thumbnail_url: i.thumbnail_url || i.image_url,
+          short_description: i.short_description,
+          sku: i.sku,
+        })));
       })
       .catch(err => setError(err.response?.data?.error || 'Virhe haettaessa tilausta'));
 
@@ -101,23 +110,30 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
   };
 
   return (
-    <div className="edit-order-modal-overlay">
-      <div className="edit-order-modal">
-        <h3>Muokkaa tilausta #{orderId}</h3>
-        {error && <p className="edit-order-modal-error">{error}</p>}
+    <div className="eom-backdrop">
+      <div className="eom-dialog">
+        <h3 className="eom-title">Muokkaa tilausta #{orderId}</h3>
+        {error && <p className="eom-error">{error}</p>}
 
-        <div>
-          <label> Asiakas: <input value={order?.customer_name||''} onChange={e => setOrder({...order, customer_name: e.target.value})} /> </label>
+        <div className="eom-field">
+          <label className="eom-label">
+            Asiakas
+            <input
+              className="eom-input"
+              value={order?.customer_name || ''}
+              onChange={e => setOrder({ ...order, customer_name: e.target.value })}
+            />
+          </label>
           {originalName && (
-            <div className="edit-order-modal-hint">
+            <div className="eom-hint">
               Syötä tilaajan nimi täsmälleen kuten tilauksessa ennen tallennusta: <strong>"{originalName}"</strong>
             </div>
           )}
         </div>
 
         {requirements && (
-          <div className="edit-order-modal-requirements">
-            <div className="edit-order-modal-requirements-title">Lisatiedot tilaukseen</div>
+          <div className="eom-requirements">
+            <div className="eom-requirements-title">Lisätiedot tilaukseen</div>
             {requirements.power && <div><strong>Sähköt:</strong> {requirements.power}</div>}
             {requirements.network && <div><strong>Verkko:</strong> {requirements.network}</div>}
             {requirements.lighting && <div><strong>Valaistus:</strong> {requirements.lighting}</div>}
@@ -125,35 +141,64 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
           </div>
         )}
 
-        <h4>Rivit</h4>
-        <div className="edit-order-modal-toolbar">
-          <select value={selectedAdd} onChange={e => setSelectedAdd(e.target.value)}>
+        <h4 className="eom-section-title">Tilatut tuotteet</h4>
+
+        <div className="eom-add-row">
+          <select className="eom-select" value={selectedAdd} onChange={e => setSelectedAdd(e.target.value)}>
             <option value="">-- Lisää tuote --</option>
             {availableItems.map(ai => (
               <option key={ai.id} value={ai.id}>{ai.name} (var: {ai.available_stock})</option>
             ))}
           </select>
-          <button onClick={addLine} className="edit-order-modal-add-btn">Lisää</button>
+          <button className="eom-btn" onClick={addLine}>Lisää</button>
         </div>
 
-        {items.map((it, idx) => {
-          const ai = availableItems.find(a => a.id === it.item_id);
-          const available = ai ? ai.available_stock : null;
-          return (
-            <div key={idx} className="edit-order-modal-row">
-              <div className="edit-order-modal-row-name">
-                {it.name || it.item_id}
-                {available !== null && <div className="edit-order-modal-stock">Varastossa vapaita: {available}</div>}
+        <div className="eom-items-list">
+          {items.map((it, idx) => {
+            const ai = availableItems.find(a => a.id === it.item_id);
+            const available = ai ? ai.available_stock : null;
+            const thumb = it.thumbnail_url || (ai && (ai.thumbnail_url || ai.image_url));
+            return (
+              <div key={idx} className="eom-item-row">
+                <img
+                  className="eom-item-thumb"
+                  src={buildImageUrl(thumb)}
+                  alt={it.name || ''}
+                  onError={e => { e.currentTarget.src = buildImageUrl(null); }}
+                />
+                <div className="eom-item-info">
+                  <div className="eom-item-name">{it.name || `#${it.item_id}`}</div>
+                  {it.sku && <div className="eom-item-meta">SKU: {it.sku}</div>}
+                  {it.short_description && <div className="eom-item-meta">{it.short_description}</div>}
+                  {available !== null && (
+                    <div className="eom-item-meta">Vapaana varastossa: {available} kpl</div>
+                  )}
+                </div>
+                <div className="eom-item-qty">
+                  <label className="eom-qty-label">Määrä</label>
+                  <input
+                    className="eom-qty-input"
+                    type="number"
+                    min="0"
+                    value={it.quantity}
+                    onChange={e => updateQty(idx, e.target.value)}
+                  />
+                </div>
+                <button className="eom-btn eom-btn-danger" onClick={() => removeLine(idx)}>Poista</button>
               </div>
-              <input type="number" min="0" value={it.quantity} onChange={e => updateQty(idx, e.target.value)} className="edit-order-modal-qty" />
-              <button onClick={() => removeLine(idx)}>Poista</button>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
 
-        <div className="edit-order-modal-actions">
-          <button onClick={submit} disabled={Boolean(originalName && ((order?.customer_name||'').trim() !== originalName.trim()))}>Tallenna</button>
-          <button onClick={onClose} className="edit-order-modal-cancel-btn">Peruuta</button>
+        <div className="eom-actions">
+          <button
+            className="eom-btn eom-btn-primary"
+            onClick={submit}
+            disabled={Boolean(originalName && ((order?.customer_name || '').trim() !== originalName.trim()))}
+          >
+            Tallenna
+          </button>
+          <button className="eom-btn" onClick={onClose}>Peruuta</button>
         </div>
       </div>
     </div>
