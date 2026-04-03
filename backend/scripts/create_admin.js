@@ -2,7 +2,7 @@
 // Usage:
 //   node backend/scripts/create_admin.js
 // Environment overrides:
-//   ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_DISPLAY_NAME
+//   ADMIN_EMAIL (required), ADMIN_PASSWORD (required), ADMIN_DISPLAY_NAME (optional)
 // The script will attempt to reuse `backend/db.js` (project Pool). If you run this
 // script from a temporary Node container (recommended for production images that
 // don't include dev tooling), make sure DB connection env vars (DATABASE_URL or
@@ -32,11 +32,27 @@ try {
   pool = new Pool(getDbConfig());
 }
 
-const email = process.env.ADMIN_EMAIL || 'Buildcat';
-const password = process.env.ADMIN_PASSWORD || 'buildcat';
-const displayName = process.env.ADMIN_DISPLAY_NAME || 'Buildcat';
+const email = process.env.ADMIN_EMAIL;
+const password = process.env.ADMIN_PASSWORD;
+const displayName = process.env.ADMIN_DISPLAY_NAME || process.env.ADMIN_EMAIL;
+
+function validateRequiredEnv() {
+  const missing = [];
+  if (!email) missing.push('ADMIN_EMAIL');
+  if (!password) missing.push('ADMIN_PASSWORD');
+
+  if (missing.length) {
+    console.error(`Missing required env vars: ${missing.join(', ')}`);
+    console.error('Set ADMIN_EMAIL and ADMIN_PASSWORD before running this script.');
+    process.exitCode = 1;
+    return false;
+  }
+  return true;
+}
 
 async function main() {
+  if (!validateRequiredEnv()) return;
+
   try {
     console.log('Creating/updating admin user', email);
     const hash = await bcrypt.hash(password, 10);
