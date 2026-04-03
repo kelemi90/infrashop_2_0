@@ -117,10 +117,11 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
 
         {requirements && (
           <div style={{ marginTop: 10, padding: 10, border: '1px solid #eee', borderRadius: 6, background: '#fafafa' }}>
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>Lisatiedot tilaukseen</div>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>Lisätiedot tilaukseen</div>
             {requirements.power && <div><strong>Sähköt:</strong> {requirements.power}</div>}
             {requirements.network && <div><strong>Verkko:</strong> {requirements.network}</div>}
             {requirements.lighting && <div><strong>Valaistus:</strong> {requirements.lighting}</div>}
+            {requirements.tv && <div><strong>TV:</strong> {requirements.tv}</div>}
           </div>
         )}
 
