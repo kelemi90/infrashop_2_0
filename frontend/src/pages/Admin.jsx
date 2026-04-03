@@ -5,7 +5,7 @@ import GroupEditor from '../components/GroupEditor';
 
 export default function Admin() {
   const navigate = useNavigate();
-  const userJson = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const userJson = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
   let user = null;
   try { user = userJson ? JSON.parse(userJson) : null; } catch (e) { user = null; }
   const [events, setEvents] = useState([]);

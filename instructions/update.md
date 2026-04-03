@@ -12,8 +12,8 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Backend (recommended: systemd service)
 ```bash
-sudo systemctl restart infrashop-backend.service
-sudo systemctl status infrashop-backend.service --no-pager -l
+sudo systemctl restart infrashop-backend.service # <This is important>
+sudo systemctl status infrashop-backend.service --no-pager -l # <This is important>
 sudo journalctl -u infrashop-backend.service -n 80 --no-pager
 ```
 

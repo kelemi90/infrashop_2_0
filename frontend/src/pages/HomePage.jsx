@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom';
 import '../styles/home.css';
+import { canManageCatalog, isAdmin } from '../utils/roles';
 
 export default function HomePage() {
-  const loggedIn = (typeof window !== 'undefined') && Boolean(localStorage.getItem('token'));
+  const loggedIn = (typeof window !== 'undefined') && Boolean(sessionStorage.getItem('token'));
   let user = null;
-  try { user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || 'null') : null; } catch (e) { user = null; }
-  const isAdmin = Boolean(user && user.role === 'admin');
+  try { user = typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('user') || 'null') : null; } catch (e) { user = null; }
+  const canManage = canManageCatalog(user);
+  const adminOnly = isAdmin(user);
 
   const cards = [
     {
@@ -30,8 +32,8 @@ export default function HomePage() {
       key: 'admin-groups',
       to: '/admin',
       title: 'Muokkaa tuoteryhmiä',
-      description: 'Muokkaa item-ryhmiä ja paketteja (Admin)',
-      adminOnly: true
+      description: 'Muokkaa item-ryhmiä ja paketteja',
+      catalogManagerOnly: true
     },
     {
       key: 'admin-events',
@@ -44,8 +46,8 @@ export default function HomePage() {
       key: 'admin-images',
       to: '/admin/items/images',
       title: 'Kuvat',
-      description: 'Muokkaa tuotteiden kuvia ja URL-osoitteita (Admin)',
-      adminOnly: true
+      description: 'Muokkaa tuotteiden kuvia ja tietoja',
+      catalogManagerOnly: true
     },
     {
       key: 'archive',
@@ -64,18 +66,18 @@ export default function HomePage() {
       key: 'logout',
       title: 'Kirjaudu ulos',
       description: 'Kirjaudu ulos järjestelmästä',
-      adminOnly: true,
       loggedInOnly: true,
       onClick: () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
         window.location.reload();
       }
     }
   ];
 
   const visibleCards = cards.filter((card) => {
-    if (card.adminOnly && !isAdmin) return false;
+    if (card.adminOnly && !adminOnly) return false;
+    if (card.catalogManagerOnly && !canManage) return false;
     if (card.loggedOutOnly && loggedIn) return false;
     if (card.loggedInOnly && !loggedIn) return false;
     return true;
