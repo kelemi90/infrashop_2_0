@@ -5,7 +5,7 @@ import GroupEditor from '../components/GroupEditor';
 
 export default function AdminGroups() {
   const navigate = useNavigate();
-  const userJson = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const userJson = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
   let user = null;
   try { user = userJson ? JSON.parse(userJson) : null; } catch (e) { user = null; }
 
@@ -25,7 +25,7 @@ export default function AdminGroups() {
     <div className="admin-page">
       <div className="admin-topbar">
         <h2>Muokkaa tuoteryhmiä</h2>
-        {user && user.role === 'admin' && (
+        {user && (
           <div>
             <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }} className="admin-logout-btn">
               Logout

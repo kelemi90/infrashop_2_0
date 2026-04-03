@@ -21,10 +21,22 @@ const LIGHTING_ITEMS = new Set([
   'rgb wash pixel ohjattu'
 ]);
 
+function isTvRequirementItem(value) {
+  return normalizeItemName(value).includes('tv');
+}
+
+const REQUIREMENT_TITLES = {
+  power: 'Sähkö',
+  network: 'Verkko',
+  lighting: 'Valaistus',
+  tv: 'TV'
+};
+
 const REQUIREMENT_LABELS = {
-  power: 'Mita laitteita tulet laittamaan tahan?',
-  network: 'Kuinka monta konetta ja tarvitsetko wifia?',
-  lighting: 'Kuinka paljon valoa tarvitset ja minka varista?'
+  power: 'Mitä sähkölaitteita tulet laittamaan tähän? Esim. 3D-printtereitä, juomille kylmäallas. Kolme tv:tä.',
+  network: 'Kuinka monta konetta ja tarvitsetko wifiä?',
+  lighting: 'Kuinka paljon valoa tarvitset ja minkä väristä?',
+  tv: 'Mihin TV tulee? (Esim. Livelava, Artemis) Muista tilata jalat tai kiinnityksen ja tarvittavat kaapelit.'
 };
 
 function normalizeItemName(value) {
@@ -47,6 +59,7 @@ function requiredRequirementKeys(cartItems) {
     if (POWER_ITEMS.has(nn)) keys.add('power');
     if (NETWORK_ITEMS.has(nn)) keys.add('network');
     if (LIGHTING_ITEMS.has(nn)) keys.add('lighting');
+    if (isTvRequirementItem(item.name)) keys.add('tv');
   }
   return Array.from(keys);
 }
@@ -62,6 +75,7 @@ export default function OrderPage() {
   const [stepCompleted, setStepCompleted] = useState(false);
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [submittedOrder, setSubmittedOrder] = useState(null);
 
   const [orderInfo, setOrderInfo] = useState({
     eventId: '',
@@ -79,7 +93,8 @@ export default function OrderPage() {
   const [specialRequirements, setSpecialRequirements] = useState({
     power: '',
     network: '',
-    lighting: ''
+    lighting: '',
+    tv: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -218,7 +233,7 @@ export default function OrderPage() {
     const requiredKeys = requiredRequirementKeys([...selectedCartItems, ...effectiveGroupItems]);
     for (const key of requiredKeys) {
       if (!specialRequirements[key] || !specialRequirements[key].trim()) {
-        setError(`Lisatieto puuttuu: ${REQUIREMENT_LABELS[key]}`);
+        setError(`Lisätieto puuttuu: ${REQUIREMENT_LABELS[key]}`);
         return;
       }
     }
@@ -236,18 +251,24 @@ export default function OrderPage() {
       specialRequirements: {
         power: specialRequirements.power,
         network: specialRequirements.network,
-        lighting: specialRequirements.lighting
+        lighting: specialRequirements.lighting,
+        tv: specialRequirements.tv
       }
     };
 
     try {
       const res = await api.post('/orders', payload); // ei auth headeria
+      setSubmittedOrder({
+        orderId: res.data.orderId,
+        deliveryPoint: orderInfo.deliveryPoint,
+        customerName: orderInfo.name
+      });
       setSuccess(`Tilaus lähetetty! Tilaus ID: ${res.data.orderId}`);
       setError('');
-  setCart({});
-  setCartGroups({});
+      setCart({});
+      setCartGroups({});
       setStepCompleted(false);
-      setSpecialRequirements({ power: '', network: '', lighting: '' });
+      setSpecialRequirements({ power: '', network: '', lighting: '', tv: '' });
       setOrderInfo({
         eventId: '',
         name: '',
@@ -281,6 +302,10 @@ export default function OrderPage() {
 
   return (
     <div className="order-page">
+      {submittedOrder && (
+        <OrderSuccessCard submittedOrder={submittedOrder} onDismiss={() => setSubmittedOrder(null)} />
+      )}
+
       {!stepCompleted && (
         <OrderForm
           events={events}
@@ -298,6 +323,8 @@ export default function OrderPage() {
           {error && <p className="error">{error}</p>}
           {success && <p className="success">{success}</p>}
 
+          <OrderContextBar orderInfo={orderInfo} events={events} />
+
           <div className="order-layout">
             <ProductsSection
               groupedItems={groupedItems}
@@ -310,6 +337,7 @@ export default function OrderPage() {
             />
 
             <CartSidebar
+              orderInfo={orderInfo}
               cart={cart}
               cartGroups={cartGroups}
               itemGroups={itemGroups}
@@ -324,6 +352,54 @@ export default function OrderPage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function OrderSuccessCard({ submittedOrder, onDismiss }) {
+  return (
+    <div className="order-success-card">
+      <div>
+        <h3>Tilaus vastaanotettu</h3>
+        <p>
+          Tilaus {submittedOrder.orderId} toimituspisteeseen {submittedOrder.deliveryPoint} on tallennettu.
+        </p>
+      </div>
+
+      <div className="order-success-actions">
+        <a
+          className="submit-btn order-success-link"
+          href={`/api/orders/${submittedOrder.orderId}/pdf`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Lataa PDF
+        </a>
+        <button className="order-success-dismiss" onClick={onDismiss}>
+          Sulje
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OrderContextBar({ orderInfo, events }) {
+  const selectedEvent = events.find((ev) => String(ev.id) === String(orderInfo.eventId));
+
+  return (
+    <div className="order-context-bar">
+      <div className="order-context-item order-context-primary">
+        <span className="order-context-label">Toimituspiste</span>
+        <strong>{orderInfo.deliveryPoint}</strong>
+      </div>
+      <div className="order-context-item">
+        <span className="order-context-label">Tapahtuma</span>
+        <span>{selectedEvent ? selectedEvent.name : '-'}</span>
+      </div>
+      <div className="order-context-item">
+        <span className="order-context-label">Palautuspäivä</span>
+        <span>{orderInfo.returnDate || '-'}</span>
+      </div>
     </div>
   );
 }
@@ -468,7 +544,7 @@ function ProductsSection({ groupedItems, itemGroups, addGroupToCart, cart, addTo
   );
 }
 
-function CartSidebar({ cart, cartGroups, itemGroups, groupItemsById, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, onSubmit }) {
+function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, onSubmit }) {
   const items = Object.values(cart).filter(i => i.quantity > 0);
   const groups = Object.entries(cartGroups || {}).map(([gid, mult]) => {
     const found = (itemGroups || []).find((g) => String(g.id) === String(gid));
@@ -486,6 +562,10 @@ function CartSidebar({ cart, cartGroups, itemGroups, groupItemsById, setCartGrou
   return (
     <aside className="cart">
       <h3>Ostoskori</h3>
+      <div className="cart-delivery-point">
+        <span className="order-context-label">Toimituspiste</span>
+        <strong>{orderInfo.deliveryPoint}</strong>
+      </div>
       {items.length === 0 && groups.length === 0 && <p>Ei tuotteita</p>}
 
       {groups.map(g => (
@@ -517,17 +597,20 @@ function CartSidebar({ cart, cartGroups, itemGroups, groupItemsById, setCartGrou
 
       {requiredKeys.length > 0 && (
         <div className="order-extra-info">
-          <h4>Lisatiedot</h4>
+          <h4>Lisätiedot</h4>
           {requiredKeys.map((key) => (
-            <label key={key} className="order-extra-label">
-              {REQUIREMENT_LABELS[key]}
-              <textarea
-                value={specialRequirements[key] || ''}
-                onChange={(e) => updateRequirement(key, e.target.value)}
-                rows={3}
-                placeholder="Kirjoita lisatieto tahan"
-              />
-            </label>
+            <div key={key} className="order-extra-section">
+              <div className="order-extra-heading">{REQUIREMENT_TITLES[key] || 'Lisätieto'}</div>
+              <label className="order-extra-label">
+                <span className="order-extra-question">{REQUIREMENT_LABELS[key]}</span>
+                <textarea
+                  value={specialRequirements[key] || ''}
+                  onChange={(e) => updateRequirement(key, e.target.value)}
+                  rows={3}
+                  placeholder="Kirjoita lisätieto tähän"
+                />
+              </label>
+            </div>
           ))}
         </div>
       )}

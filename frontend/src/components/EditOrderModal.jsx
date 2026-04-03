@@ -121,6 +121,7 @@ export default function EditOrderModal({ orderId, onClose, onSaved }) {
             {requirements.power && <div><strong>Sähköt:</strong> {requirements.power}</div>}
             {requirements.network && <div><strong>Verkko:</strong> {requirements.network}</div>}
             {requirements.lighting && <div><strong>Valaistus:</strong> {requirements.lighting}</div>}
+            {requirements.tv && <div><strong>TV:</strong> {requirements.tv}</div>}
           </div>
         )}
 

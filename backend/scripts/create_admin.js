@@ -1,14 +1,15 @@
-// Create or update an admin user.
+// Create or update a backend-managed user with a chosen role.
 // Usage:
 //   node backend/scripts/create_admin.js
 // Environment overrides:
-//   ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_DISPLAY_NAME
+//   ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_DISPLAY_NAME, ADMIN_ROLE
 // The script will attempt to reuse `backend/db.js` (project Pool). If you run this
 // script from a temporary Node container (recommended for production images that
 // don't include dev tooling), make sure DB connection env vars (DATABASE_URL or
 // DB_HOST/DB_USER/DB_PASSWORD/DB_NAME) are provided so the script can connect.
 
 const bcrypt = require('bcrypt');
+const { ROLE_ADMIN, ROLE_MODERATOR } = require('../auth/roles');
 let pool;
 
 // Try to reuse the project's db pool if available, otherwise create our own.
@@ -32,26 +33,36 @@ try {
   pool = new Pool(getDbConfig());
 }
 
-const email = process.env.ADMIN_EMAIL || 'Buildcat';
-const password = process.env.ADMIN_PASSWORD || 'buildcat';
-const displayName = process.env.ADMIN_DISPLAY_NAME || 'Buildcat';
+const email = (process.env.ADMIN_EMAIL || '').trim();
+const password = process.env.ADMIN_PASSWORD || '';
+const displayName = (process.env.ADMIN_DISPLAY_NAME || email).trim();
+const role = process.env.ADMIN_ROLE || ROLE_ADMIN;
+
+function normalizeRole(inputRole) {
+  if (inputRole === ROLE_ADMIN || inputRole === ROLE_MODERATOR) return inputRole;
+  throw new Error(`Unsupported role: ${inputRole}`);
+}
 
 async function main() {
   try {
-    console.log('Creating/updating admin user', email);
+    if (!email) throw new Error('ADMIN_EMAIL is required (or pass --email via scripts/run_create_admin.sh).');
+    if (!password) throw new Error('ADMIN_PASSWORD is required (or pass --password via scripts/run_create_admin.sh).');
+
+    const normalizedRole = normalizeRole(role);
+    console.log(`Creating/updating ${normalizedRole} user`, email);
     const hash = await bcrypt.hash(password, 10);
 
     const existing = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
     if (existing.rows.length) {
-      await pool.query('UPDATE users SET password_hash=$1, display_name=$2, role=$3 WHERE email=$4', [hash, displayName, 'admin', email]);
-      console.log('Updated existing admin user.');
+      await pool.query('UPDATE users SET password_hash=$1, display_name=$2, role=$3 WHERE email=$4', [hash, displayName, normalizedRole, email]);
+      console.log(`Updated existing ${normalizedRole} user.`);
     } else {
-      const r = await pool.query('INSERT INTO users (email, password_hash, display_name, role) VALUES ($1,$2,$3,$4) RETURNING id', [email, hash, displayName, 'admin']);
-      console.log('Created admin user id', r.rows[0].id);
+      const r = await pool.query('INSERT INTO users (email, password_hash, display_name, role) VALUES ($1,$2,$3,$4) RETURNING id', [email, hash, displayName, normalizedRole]);
+      console.log(`Created ${normalizedRole} user id`, r.rows[0].id);
     }
     console.log('Done.');
   } catch (err) {
-    console.error('Error creating admin:', err && err.message ? err.message : err);
+    console.error('Error creating user:', err && err.message ? err.message : err);
     process.exitCode = 1;
   } finally {
     // close pool if it exposes end()

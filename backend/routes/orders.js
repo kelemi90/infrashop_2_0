@@ -23,6 +23,10 @@ const LIGHTING_ITEMS = new Set([
   'rgb wash pixel ohjattu'
 ]);
 
+function isTvRequirementItem(value) {
+  return normalizeItemName(value).includes('tv');
+}
+
 function normalizeItemName(value) {
   if (!value) return '';
   try {
@@ -43,6 +47,7 @@ function requiredRequirementKeysFromItems(itemNames) {
     if (POWER_ITEMS.has(nn)) keys.add('power');
     if (NETWORK_ITEMS.has(nn)) keys.add('network');
     if (LIGHTING_ITEMS.has(nn)) keys.add('lighting');
+    if (isTvRequirementItem(n)) keys.add('tv');
   }
   return Array.from(keys);
 }
@@ -54,6 +59,7 @@ function sanitizeSpecialRequirements(input) {
   if (typeof src.power === 'string' && src.power.trim()) out.power = src.power.trim();
   if (typeof src.network === 'string' && src.network.trim()) out.network = src.network.trim();
   if (typeof src.lighting === 'string' && src.lighting.trim()) out.lighting = src.lighting.trim();
+  if (typeof src.tv === 'string' && src.tv.trim()) out.tv = src.tv.trim();
 
   return out;
 }
@@ -222,9 +228,10 @@ router.post('/', async (req, res) => {
 
     for (const key of requiredKeys) {
       if (!cleanRequirements[key]) {
-        if (key === 'power') throw new Error('Lisatieto pakollinen: Mita laitteita tulet laittamaan tahan?');
-        if (key === 'network') throw new Error('Lisatieto pakollinen: Kuinka monta konetta ja tarvitsetko wifia?');
-        if (key === 'lighting') throw new Error('Lisatieto pakollinen: Kuinka paljon valoa tarvitset ja minka varista?');
+        if (key === 'power') throw new Error('Lisätieto sähkön tilaukseen pakollinen: Mitä sähkölaitteita tulet laittamaan tähän? Esim. 3D-printtereitä, juomille kylmäallas. Kolme tv:tä.');
+        if (key === 'network') throw new Error('Lisätieto verkon tilaukseen pakollinen: Kuinka monta konetta ja tarvitsetko wifiä?');
+        if (key === 'lighting') throw new Error('Lisätieto dekon tilaukseen pakollinen: Kuinka paljon valoa tarvitset ja minkä väristä?');
+        if (key === 'tv') throw new Error('Lisätieto TV-tilaukseen pakollinen: Mihin TV tulee? (Esim. Livelava, Artemis) Muista tilata jalat tai kiinnityksen ja tarvittavat kaapelit.');
       }
     }
 
@@ -788,7 +795,8 @@ const PDFDocument = require('pdfkit');
       const REQUIREMENT_LABELS = {
         power: 'Mitä laitteita tulet laittamaan tähän?',
         network: 'Kuinka monta konetta ja tarvitsetko wifiä?',
-        lighting: 'Kuinka paljon valoa tarvitset ja minkä väristä?'
+        lighting: 'Kuinka paljon valoa tarvitset ja minkä väristä?',
+        tv: 'Mihin TV tulee? (Esim. Livelava, Artemis) Muista tilata jalat tai kiinnityksen ja tarvittavat kaapelit.'
       };
       if (sr && typeof sr === 'object') {
         const entries = Object.entries(REQUIREMENT_LABELS)

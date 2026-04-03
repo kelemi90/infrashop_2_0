@@ -2,9 +2,10 @@ import { NavLink, Outlet } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import QuickCreateItemModal from '../components/QuickCreateItemModal';
 import '../styles/layout.css';
+import { canManageCatalog, isAdmin } from '../utils/roles';
 
 export default function Layout() {
-  const userJson = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const userJson = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
   let user = null;
   try { user = userJson ? JSON.parse(userJson) : null; } catch (e) { user = null; }
   // Quick-create modal moved to a dedicated page. Keep header links as navigation.
@@ -44,17 +45,17 @@ export default function Layout() {
             <NavLink to="/orders">Tilaukset</NavLink>
             <NavLink to="/reports">Reports</NavLink>
             <NavLink to="/archive">Arkisto</NavLink>
-            {user && user.role === 'admin' && (
+            {canManageCatalog(user) && (
               <>
                 <NavLink to="/admin" className="nav-multiline">
                   <span>Muokkaa</span>
                   <span className="muted">tuotepakettia</span>
                 </NavLink>
-                <NavLink to="/admin/events" className="admin-btn">Tapahtumat</NavLink>
                 <NavLink to="/admin/items/images" className="admin-btn">Kuvat</NavLink>
                 <button className="admin-shortcut" title="Quick create" aria-label="Quick create item" onClick={() => setShowQuickCreate(true)}>+</button>
               </>
             )}
+            {isAdmin(user) && <NavLink to="/admin/events" className="admin-btn">Tapahtumat</NavLink>}
           </nav>
         </div>
       </header>
