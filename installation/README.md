@@ -106,9 +106,15 @@ Step 7 — Create an admin user
 ```bash
 sudo -u infrashop bash -lc "cd /srv/infrashop/backend && \
   export DATABASE_URL=postgresql://infrashop:<DB_PASSWORD>@127.0.0.1:5432/infrashop && \
-  export ADMIN_EMAIL=admin@vectorama.fi ADMIN_PASSWORD='YourStrongPassword!' && npm run create_admin"
+    export ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='<ADMIN_PASSWORD>' && npm run create_admin"
 ```
 
+Create a moderator user the same way when you want catalog-management access without full admin rights:
+```bash
+sudo -u infrashop bash -lc "cd /srv/infrashop/backend && \
+    export DATABASE_URL=postgresql://infrashop:<DB_PASSWORD>@127.0.0.1:5432/infrashop && \
+    export ADMIN_EMAIL=moderator@example.com ADMIN_PASSWORD='<MODERATOR_PASSWORD>' ADMIN_DISPLAY_NAME='Moderator' && npm run create_moderator"
+```
 Step 8 — Install backend production dependencies
 ```bash
 sudo -u infrashop bash -lc "cd /srv/infrashop/backend && npm ci --production --no-audit --no-fund"
