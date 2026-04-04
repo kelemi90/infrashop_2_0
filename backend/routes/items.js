@@ -220,7 +220,7 @@ module.exports = router;
 router.put('/:id', requireCatalogManager, async (req, res) => {
   try {
     const id = req.params.id;
-    const { sku, name, short_description, total_stock, available_stock, category } = req.body;
+    const { sku, name, short_description, long_description, total_stock, available_stock, category } = req.body;
 
     const existingRes = await db.query('SELECT * FROM items WHERE id=$1', [id]);
     if (!existingRes.rows.length) return res.status(404).json({ error: 'Item not found' });
@@ -229,16 +229,17 @@ router.put('/:id', requireCatalogManager, async (req, res) => {
     const newSku = sku !== undefined ? sku : existing.sku;
     const newName = name !== undefined ? name : existing.name;
     const newShort = short_description !== undefined ? short_description : existing.short_description;
+    const newLong = long_description !== undefined ? long_description : existing.long_description;
     const newTotal = total_stock !== undefined ? total_stock : existing.total_stock;
     const newAvail = available_stock !== undefined ? available_stock : existing.available_stock;
     const newCat = category !== undefined ? category : existing.category;
 
     await db.query(
-      `UPDATE items SET sku=$1, name=$2, short_description=$3, total_stock=$4, available_stock=$5, category=$6, updated_at=now() WHERE id=$7`,
-      [newSku, newName, newShort, newTotal, newAvail, newCat, id]
+      `UPDATE items SET sku=$1, name=$2, short_description=$3, long_description=$4, total_stock=$5, available_stock=$6, category=$7, updated_at=now() WHERE id=$8`,
+      [newSku, newName, newShort, newLong, newTotal, newAvail, newCat, id]
     );
 
-    const item = (await db.query('SELECT id, sku, name, short_description, image_url, thumbnail_url, total_stock, available_stock, category FROM items WHERE id=$1', [id])).rows[0];
+    const item = (await db.query('SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url, total_stock, available_stock, category FROM items WHERE id=$1', [id])).rows[0];
     res.json(item);
   } catch (err) {
     console.error('Update item error:', err);
@@ -249,14 +250,14 @@ router.put('/:id', requireCatalogManager, async (req, res) => {
 // POST /api/items - create a new item (catalog manager only)
 router.post('/', requireCatalogManager, async (req, res) => {
   try {
-    const { sku, name, short_description, total_stock, available_stock, category } = req.body;
+    const { sku, name, short_description, long_description, total_stock, available_stock, category } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });
     // if sku not provided, generate one from the name and ensure uniqueness
     let finalSku = sku && String(sku).trim() ? String(sku).trim() : await generateSkuFromName(name);
     const r = await db.query(
-      `INSERT INTO items (sku, name, short_description, total_stock, available_stock, category, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6, now(), now()) RETURNING id, sku, name, short_description, image_url, thumbnail_url, total_stock, available_stock, category`,
-      [finalSku, name, short_description || null, total_stock || 0, available_stock || 0, category || null]
+      `INSERT INTO items (sku, name, short_description, long_description, total_stock, available_stock, category, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7, now(), now()) RETURNING id, sku, name, short_description, long_description, image_url, thumbnail_url, total_stock, available_stock, category`,
+      [finalSku, name, short_description || null, long_description || null, total_stock || 0, available_stock || 0, category || null]
     );
     res.status(201).json(r.rows[0]);
   } catch (err) {

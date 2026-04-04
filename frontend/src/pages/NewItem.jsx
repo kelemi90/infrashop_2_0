@@ -5,6 +5,7 @@ import api from '../api';
 export default function NewItem(){
   const [name, setName] = useState('');
   const [shortDescription, setShortDescription] = useState('');
+  const [longDescription, setLongDescription] = useState('');
   const [totalStock, setTotalStock] = useState(0);
   const [availableStock, setAvailableStock] = useState(0);
   const [category, setCategory] = useState('');
@@ -31,6 +32,7 @@ export default function NewItem(){
       const payload = {
         name: name.trim(),
         short_description: shortDescription || null,
+        long_description: longDescription || null,
         total_stock: Number(totalStock) || 0,
         available_stock: Number(availableStock) || 0,
         category: category || null
@@ -61,6 +63,11 @@ export default function NewItem(){
         <div className="new-item-field">
           <label>Lyhyt kuvaus<br/>
             <textarea value={shortDescription} onChange={e=>setShortDescription(e.target.value)} />
+          </label>
+        </div>
+        <div className="new-item-field">
+          <label>Pitkä kuvaus<br/>
+            <textarea value={longDescription} onChange={e=>setLongDescription(e.target.value)} rows={5} />
           </label>
         </div>
         <div style={{ display:'flex', gap:12, marginBottom:8 }}>

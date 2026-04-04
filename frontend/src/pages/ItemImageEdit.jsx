@@ -50,6 +50,7 @@ export default function ItemImageEdit(){
         sku: selected.sku || '',
         name: selected.name || '',
         short_description: selected.short_description || '',
+        long_description: selected.long_description || '',
         total_stock: selected.total_stock || 0,
         available_stock: selected.available_stock || 0,
         category: selected.category || ''
@@ -162,6 +163,13 @@ export default function ItemImageEdit(){
                     <div className="edit-label">Lyhyt kuvaus:</div>
                     <div className="edit-field">
                       <textarea value={editValues.short_description} onChange={e=>setEditValues(v=>({...v, short_description: e.target.value}))} />
+                    </div>
+                  </div>
+
+                  <div className="edit-row">
+                    <div className="edit-label">Pitkä kuvaus:</div>
+                    <div className="edit-field">
+                      <textarea value={editValues.long_description} onChange={e=>setEditValues(v=>({...v, long_description: e.target.value}))} rows={5} />
                     </div>
                   </div>
 
