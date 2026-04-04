@@ -214,8 +214,6 @@ router.post('/:id/image', requireCatalogManager, upload.fields([{ name: 'image',
   }
 });
 
-module.exports = router;
-
 // PUT /api/items/:id - update item (catalog manager only)
 router.put('/:id', requireCatalogManager, async (req, res) => {
   try {
@@ -265,4 +263,66 @@ router.post('/', requireCatalogManager, async (req, res) => {
     res.status(500).json({ error: 'Failed to create item' });
   }
 });
+
+// DELETE /api/items/:id - delete item (catalog manager only)
+router.delete('/:id', requireCatalogManager, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ error: 'Invalid item id' });
+
+  const client = await db.connect();
+  let imageFiles = [];
+
+  try {
+    await client.query('BEGIN');
+
+    const itemRes = await client.query('SELECT id, name FROM items WHERE id=$1 FOR UPDATE', [id]);
+    if (!itemRes.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    const inOrdersRes = await client.query('SELECT COUNT(*)::int AS count FROM order_items WHERE item_id=$1', [id]);
+    const inAuditRes = await client.query('SELECT COUNT(*)::int AS count FROM stock_audit WHERE item_id=$1', [id]);
+    const inOrders = inOrdersRes.rows[0]?.count || 0;
+    const inAudit = inAuditRes.rows[0]?.count || 0;
+
+    if (inOrders > 0 || inAudit > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error: 'Item cannot be deleted because it has order history',
+        details: { in_orders: inOrders, in_stock_audit: inAudit }
+      });
+    }
+
+    const imgRes = await client.query('SELECT image_url, thumbnail_url FROM item_images WHERE item_id=$1', [id]);
+    imageFiles = imgRes.rows
+      .flatMap((r) => [r.image_url, r.thumbnail_url])
+      .filter(Boolean);
+
+    await client.query('DELETE FROM item_group_items WHERE item_id=$1', [id]);
+    await client.query('DELETE FROM item_images WHERE item_id=$1', [id]);
+    await client.query('DELETE FROM items WHERE id=$1', [id]);
+
+    await client.query('COMMIT');
+
+    const imagesDir = path.join(__dirname, '..', 'public', 'images');
+    await Promise.all(imageFiles.map(async (filename) => {
+      try {
+        await fs.promises.unlink(path.join(imagesDir, filename));
+      } catch (e) {
+        if (e.code !== 'ENOENT') console.warn('Failed to remove image file:', filename, e.message);
+      }
+    }));
+
+    return res.json({ ok: true, id });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) {}
+    console.error('Delete item error:', err);
+    return res.status(500).json({ error: 'Failed to delete item' });
+  } finally {
+    client.release();
+  }
+});
+
+module.exports = router;
 
