@@ -281,18 +281,15 @@ router.delete('/:id', requireCatalogManager, async (req, res) => {
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    const inOrdersRes = await client.query('SELECT COUNT(*)::int AS count FROM order_items WHERE item_id=$1', [id]);
-    const inAuditRes = await client.query('SELECT COUNT(*)::int AS count FROM stock_audit WHERE item_id=$1', [id]);
-    const inOrders = inOrdersRes.rows[0]?.count || 0;
-    const inAudit = inAuditRes.rows[0]?.count || 0;
-
-    if (inOrders > 0 || inAudit > 0) {
-      await client.query('ROLLBACK');
-      return res.status(409).json({
-        error: 'Item cannot be deleted because it has order history',
-        details: { in_orders: inOrders, in_stock_audit: inAudit }
-      });
-    }
+    // Keep historical rows but detach FK links so the item can be removed.
+    const detachedOrderItemsRes = await client.query(
+      'UPDATE order_items SET item_id = NULL WHERE item_id = $1 RETURNING id',
+      [id]
+    );
+    const detachedAuditRowsRes = await client.query(
+      'UPDATE stock_audit SET item_id = NULL WHERE item_id = $1 RETURNING id',
+      [id]
+    );
 
     const imgRes = await client.query('SELECT image_url, thumbnail_url FROM item_images WHERE item_id=$1', [id]);
     imageFiles = imgRes.rows
@@ -314,7 +311,12 @@ router.delete('/:id', requireCatalogManager, async (req, res) => {
       }
     }));
 
-    return res.json({ ok: true, id });
+    return res.json({
+      ok: true,
+      id,
+      detached_order_items: detachedOrderItemsRes.rowCount || 0,
+      detached_stock_audit: detachedAuditRowsRes.rowCount || 0
+    });
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (e) {}
     console.error('Delete item error:', err);
