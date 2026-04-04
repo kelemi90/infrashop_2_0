@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS orders (
   status TEXT NOT NULL DEFAULT 'placed', -- placed | delivered | returned | archived
 
   special_requirements JSONB,
+  open_comment TEXT,
 
   pdf_path TEXT, -- polku PDF-tiedostoon
 
@@ -93,6 +94,9 @@ ALTER TABLE orders
 
 ALTER TABLE orders
   ADD COLUMN IF NOT EXISTS special_requirements JSONB;
+
+ALTER TABLE orders
+  ADD COLUMN IF NOT EXISTS open_comment TEXT;
 
 -- ------------------------------
 -- order_items: tilauksen sisältämät tuotteet

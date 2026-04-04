@@ -11,27 +11,6 @@ const PRESETS = {
   Verkko: ["sähköt", "verkko", "Cables"]
 };
 
-function normalizeName(value) {
-  if (!value) return '';
-  try {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-  } catch (e) {
-    return String(value).toLowerCase().trim();
-  }
-}
-
-function isTableItem(name) {
-  const n = normalizeName(name);
-  if (n.includes('vaneripoyd')) return true;
-  if (n.includes('valkoinen muovipoyta')) return true;
-  if (n.includes('valkoiset muovipöydät')) return true;
-  return false;
-}
-
 function sortByDeliveryPointThenName(a, b) {
   const byDeliveryPoint = String(a.delivery_point || '').localeCompare(
     String(b.delivery_point || ''),
@@ -43,6 +22,27 @@ function sortByDeliveryPointThenName(a, b) {
   return String(a.name || '').localeCompare(String(b.name || ''), 'fi', {
     sensitivity: 'base'
   });
+}
+
+function aggregateByItemName(items) {
+  const byName = items.reduce((acc, row) => {
+    const key = String(row.name || '').trim();
+    if (!acc[key]) {
+      acc[key] = {
+        name: row.name,
+        total_quantity: 0
+      };
+    }
+
+    acc[key].total_quantity += Number(row.total_quantity || 0);
+    return acc;
+  }, {});
+
+  return Object.values(byName).sort((a, b) =>
+    String(a.name || '').localeCompare(String(b.name || ''), 'fi', {
+      sensitivity: 'base'
+    })
+  );
 }
 
 export default function ReportsPage() {
@@ -82,11 +82,7 @@ export default function ReportsPage() {
     acc[row.category].push(row);
     return acc;
   }, {});
-
-  const tableItems = data.filter((row) => isTableItem(row.name));
-  const sortedTableItems = [...tableItems].sort(sortByDeliveryPointThenName);
-  const totalTables = tableItems.reduce((sum, row) => sum + Number(row.total_quantity || 0), 0);
-  const showBuildTableSummary = activePreset === 'Build';
+  const sortedAllItemsByDeliveryPoint = [...data].sort(sortByDeliveryPointThenName);
 
   return (
     <div className="reports-page">
@@ -106,41 +102,33 @@ export default function ReportsPage() {
 
       {error && <p className="error">{error}</p>}
 
-      {showBuildTableSummary && (
-        <div className="report-category">
-          <h3>Build - pöydät (yhteenveto)</h3>
-          {tableItems.length === 0 ? (
-            <p>Ei tilattuja poytia Build-raportissa.</p>
-          ) : (
-            <>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Tuote</th>
-                    <th>Toimituspiste</th>
-                    <th>Yhteensä tilattu</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedTableItems.map((i, idx) => (
-                    <tr key={`build-table-${i.name}-${i.delivery_point}-${idx}`}>
-                      <td>{i.name}</td>
-                      <td>{i.delivery_point}</td>
-                      <td>{i.total_quantity}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="reports-table-total">Poytia yhteensa: {totalTables}</p>
-            </>
-          )}
-        </div>
-      )}
-
       {Object.entries(grouped).map(([category, items]) => (
         <div key={category} className="report-category">
           <h3>{category}</h3>
 
+          <h4>Tilatut {category}:</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Tuote</th>
+                <th>Yhteensä tilattu</th>
+              </tr>
+            </thead>
+            <tbody>
+              {aggregateByItemName(items).map((i, idx) => (
+                <tr key={`${category}-${i.name}-${idx}`}>
+                  <td>{i.name}</td>
+                  <td>{i.total_quantity}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+
+      {data.length > 0 && (
+        <div className="report-category">
+          <h4>Tilatut tuotteet toimituspisteittäin:</h4>
           <table>
             <thead>
               <tr>
@@ -150,8 +138,8 @@ export default function ReportsPage() {
               </tr>
             </thead>
             <tbody>
-              {[...items].sort(sortByDeliveryPointThenName).map((i, idx) => (
-                <tr key={`${i.name}-${i.delivery_point}-${idx}`}>
+              {sortedAllItemsByDeliveryPoint.map((i, idx) => (
+                <tr key={`all-items-${i.name}-${i.delivery_point}-${idx}`}>
                   <td>{i.name}</td>
                   <td>{i.delivery_point}</td>
                   <td>{i.total_quantity}</td>
@@ -160,7 +148,7 @@ export default function ReportsPage() {
             </tbody>
           </table>
         </div>
-      ))}
+      )}
 
       <div className="reports-group-section">
         <h3>Group reports</h3>

@@ -92,7 +92,10 @@ export default function EditOrderModal({ orderId, customerName, onClose, onSaved
   const submit = async () => {
     setError('');
     try {
-      const payload = { items: items.map(i => ({ item_id: i.item_id, quantity: i.quantity })) };
+      const payload = {
+        items: items.map(i => ({ item_id: i.item_id, quantity: i.quantity })),
+        open_comment: order?.open_comment || ''
+      };
       if (order.customer_name) payload.customer_name = order.customer_name;
       const res = await api.patch(`/orders/${orderId}`, payload);
       onSaved && onSaved(res.data);
@@ -114,6 +117,19 @@ export default function EditOrderModal({ orderId, customerName, onClose, onSaved
               className="eom-input"
               value={order?.customer_name || ''}
               onChange={e => setOrder({ ...order, customer_name: e.target.value })}
+            />
+          </label>
+        </div>
+
+        <div className="eom-field">
+          <label className="eom-label">
+            Avoin kommentti
+            <textarea
+              className="eom-input"
+              rows={3}
+              value={order?.open_comment || ''}
+              onChange={e => setOrder({ ...order, open_comment: e.target.value })}
+              placeholder="Kirjoita tilauksen vapaa kommentti"
             />
           </label>
         </div>

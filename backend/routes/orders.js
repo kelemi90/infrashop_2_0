@@ -68,6 +68,7 @@ function sanitizeSpecialRequirements(input) {
 (async () => {
   try {
     await db.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS special_requirements JSONB');
+    await db.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS open_comment TEXT');
   } catch (err) {
     console.error('Failed to ensure orders.special_requirements:', err);
   }
@@ -113,7 +114,7 @@ function requireAdmin(req, res, next) {
 // - event_id on pakollinen, jotta tilaus voidaan arkistoida tapahtumaan
 // =======================
 router.post('/', async (req, res) => {
-  const { name, organization, deliveryPoint, returnAt, items, eventId, specialRequirements } = req.body || {};
+  const { name, organization, deliveryPoint, returnAt, items, eventId, specialRequirements, openComment } = req.body || {};
 
   if (!name || !organization || !deliveryPoint || !returnAt) {
     return res.status(400).json({ error: 'Pakollisia kenttiä puuttuu' });
@@ -236,6 +237,9 @@ router.post('/', async (req, res) => {
     }
 
     const requirementsValue = Object.keys(cleanRequirements).length ? cleanRequirements : null;
+    const openCommentValue = typeof openComment === 'string' && openComment.trim()
+      ? openComment.trim()
+      : null;
 
     const orderRes = await client.query(
       `INSERT INTO orders (
@@ -246,9 +250,10 @@ router.post('/', async (req, res) => {
         delivery_start,
         return_at,
         status,
-        special_requirements
-      ) VALUES ($1,$2,$3,$4,now(),$5,'placed',$6) RETURNING id`,
-      [parsedEventId, String(name).trim(), String(organization).trim(), String(deliveryPoint).trim(), returnAt, requirementsValue]
+        special_requirements,
+        open_comment
+      ) VALUES ($1,$2,$3,$4,now(),$5,'placed',$6,$7) RETURNING id`,
+      [parsedEventId, String(name).trim(), String(organization).trim(), String(deliveryPoint).trim(), returnAt, requirementsValue, openCommentValue]
     );
 
     const orderId = orderRes.rows[0].id;
@@ -449,6 +454,7 @@ router.patch('/:id', async (req, res) => {
     delivery_start,
     return_at,
     status,
+    open_comment,
     items
   } = req.body;
 
@@ -583,6 +589,7 @@ router.patch('/:id', async (req, res) => {
     if (delivery_start !== undefined) { fields.push(`delivery_start=$${idx++}`); values.push(delivery_start); }
     if (return_at !== undefined) { fields.push(`return_at=$${idx++}`); values.push(return_at); }
     if (status !== undefined) { fields.push(`status=$${idx++}`); values.push(status); }
+    if (open_comment !== undefined) { fields.push(`open_comment=$${idx++}`); values.push(open_comment); }
 
     if (fields.length) {
       values.push(orderId);
@@ -739,6 +746,9 @@ const PDFDocument = require('pdfkit');
 
       doc.text(`Palautuspäivä: ${returnDate}`);
       doc.text(`Status: ${order.status}`);
+      if (order.open_comment && String(order.open_comment).trim()) {
+        doc.text(`Avoin kommentti: ${String(order.open_comment).trim()}`);
+      }
       doc.moveDown();
 
       doc.fontSize(14).text('Tuotteet');
@@ -802,15 +812,20 @@ const PDFDocument = require('pdfkit');
         const entries = Object.entries(REQUIREMENT_LABELS)
           .filter(([key]) => sr[key] && String(sr[key]).trim());
         if (entries.length > 0) {
+          const contentX = 50;
+          const contentWidth = doc.page.width - contentX - 50;
           // new page if not enough room
           if (doc.y + entries.length * 40 + 30 > doc.page.height - 60) {
             doc.addPage();
           }
-          doc.fontSize(14).font('Helvetica-Bold').fillColor('#000000').text('Lisätiedot');
+          doc.x = contentX;
+          doc.fontSize(14).font('Helvetica-Bold').fillColor('#000000').text('Lisätiedot', contentX, doc.y, { width: contentWidth });
           doc.moveDown(0.3);
           entries.forEach(([key, label]) => {
-            doc.fontSize(10).font('Helvetica-Bold').text(label);
-            doc.fontSize(10).font('Helvetica').text(String(sr[key]).trim());
+            doc.x = contentX;
+            doc.fontSize(10).font('Helvetica-Bold').text(label, contentX, doc.y, { width: contentWidth });
+            doc.x = contentX;
+            doc.fontSize(10).font('Helvetica').text(String(sr[key]).trim(), contentX, doc.y, { width: contentWidth });
             doc.moveDown(0.5);
           });
         }

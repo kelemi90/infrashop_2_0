@@ -96,6 +96,7 @@ export default function OrderPage() {
     lighting: '',
     tv: ''
   });
+  const [openComment, setOpenComment] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [openCategory, setOpenCategory] = useState(null);
@@ -253,7 +254,8 @@ export default function OrderPage() {
         network: specialRequirements.network,
         lighting: specialRequirements.lighting,
         tv: specialRequirements.tv
-      }
+      },
+      openComment
     };
 
     try {
@@ -269,6 +271,7 @@ export default function OrderPage() {
       setCartGroups({});
       setStepCompleted(false);
       setSpecialRequirements({ power: '', network: '', lighting: '', tv: '' });
+      setOpenComment('');
       setOrderInfo({
         eventId: '',
         name: '',
@@ -347,6 +350,8 @@ export default function OrderPage() {
               requiredKeys={requiredKeys}
               specialRequirements={specialRequirements}
               setSpecialRequirements={setSpecialRequirements}
+              openComment={openComment}
+              setOpenComment={setOpenComment}
               onSubmit={submitOrder}
             />
           </div>
@@ -552,7 +557,7 @@ function ProductsSection({ groupedItems, itemGroups, addGroupToCart, cart, addTo
   );
 }
 
-function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, onSubmit }) {
+function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, openComment, setOpenComment, onSubmit }) {
   const items = Object.values(cart).filter(i => i.quantity > 0);
   const groups = Object.entries(cartGroups || {}).map(([gid, mult]) => {
     const found = (itemGroups || []).find((g) => String(g.id) === String(gid));
@@ -618,6 +623,18 @@ function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, 
           ))}
         </div>
       )}
+
+      <div className="order-open-comment">
+        <label className="order-extra-label">
+          <span className="order-extra-question">Avoin kommentti tilaukseen (valinnainen)</span>
+          <textarea
+            value={openComment}
+            onChange={(e) => setOpenComment(e.target.value)}
+            rows={3}
+            placeholder="Kirjoita mahdolliset lisähuomiot tähän"
+          />
+        </label>
+      </div>
 
       {(items.length > 0 || groups.length > 0) && (
         <button className="submit-btn" onClick={onSubmit}>
