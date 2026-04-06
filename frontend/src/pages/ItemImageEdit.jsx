@@ -54,7 +54,9 @@ export default function ItemImageEdit(){
         long_description: selected.long_description || '',
         total_stock: selected.total_stock || 0,
         available_stock: selected.available_stock || 0,
-        category: selected.category || ''
+        category: selected.category || '',
+        auto_add_item_id: selected.auto_add_item_id ? String(selected.auto_add_item_id) : '',
+        auto_add_item_quantity: selected.auto_add_item_quantity || 1
       });
     }
   }, [selected]);
@@ -181,6 +183,36 @@ export default function ItemImageEdit(){
                     <div className="edit-label">Kategoria:</div>
                     <div className="edit-field">
                       <input value={editValues.category} onChange={e=>setEditValues(v=>({...v, category: e.target.value}))} />
+                    </div>
+                  </div>
+
+                  <div className="edit-row">
+                    <div className="edit-label">Auto-add second item:</div>
+                    <div className="edit-field">
+                      <select
+                        value={editValues.auto_add_item_id || ''}
+                        onChange={e => setEditValues(v => ({ ...v, auto_add_item_id: e.target.value }))}
+                      >
+                        <option value="">No auto-add</option>
+                        {items
+                          .filter((it) => String(it.id) !== String(selected.id))
+                          .map((it) => (
+                            <option key={it.id} value={it.id}>{it.name}</option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="edit-row">
+                    <div className="edit-label">Auto-add quantity:</div>
+                    <div className="edit-field small">
+                      <input
+                        type="number"
+                        min="1"
+                        value={editValues.auto_add_item_quantity || 1}
+                        onChange={e => setEditValues(v => ({ ...v, auto_add_item_quantity: Number(e.target.value) || 1 }))}
+                        disabled={!editValues.auto_add_item_id}
+                      />
                     </div>
                   </div>
 

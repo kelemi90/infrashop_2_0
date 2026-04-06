@@ -117,11 +117,31 @@ const upload = multer({
   }
 });
 
+// Keep item settings backward-compatible on existing databases.
+(async () => {
+  try {
+    await db.query('ALTER TABLE items ADD COLUMN IF NOT EXISTS auto_add_item_id INT');
+    await db.query('ALTER TABLE items ADD COLUMN IF NOT EXISTS auto_add_item_quantity INT NOT NULL DEFAULT 1');
+  } catch (err) {
+    console.error('Failed to ensure items auto-add columns:', err);
+  }
+})();
+
+function parseNullablePositiveInt(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const n = parseInt(value, 10);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
+
 /* GET all items */
 router.get('/', async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url, available_stock, category FROM items ORDER BY name'
+      `SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url,
+              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity
+       FROM items
+       ORDER BY name`
     );
     const hydrated = await hydrateItemsWithImages(result.rows);
     res.json(hydrated);
@@ -137,7 +157,9 @@ router.get('/:id', async (req, res) => {
     const itemId = req.params.id;
 
     const result = await db.query(
-      'SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url, available_stock, category FROM items WHERE id = $1',
+      `SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url,
+              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity
+       FROM items WHERE id = $1`,
       [itemId]
     );
 
@@ -193,7 +215,12 @@ router.post('/:id/image', requireCatalogManager, upload.fields([{ name: 'image',
     const primary = primaryRes.rows[0] || {};
     await db.query('UPDATE items SET image_url=$1, thumbnail_url=$2, updated_at=now() WHERE id=$3', [primary.image_url || null, primary.thumbnail_url || null, id]);
 
-    const itemRow = (await db.query('SELECT id, sku, name, short_description, image_url, thumbnail_url, available_stock, category FROM items WHERE id=$1', [id])).rows;
+    const itemRow = (await db.query(
+      `SELECT id, sku, name, short_description, image_url, thumbnail_url,
+              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity
+       FROM items WHERE id=$1`,
+      [id]
+    )).rows;
     const item = (await hydrateItemsWithImages(itemRow))[0];
     res.json({ ok: true, item });
   } catch (err) {
@@ -218,7 +245,7 @@ router.post('/:id/image', requireCatalogManager, upload.fields([{ name: 'image',
 router.put('/:id', requireCatalogManager, async (req, res) => {
   try {
     const id = req.params.id;
-    const { sku, name, short_description, long_description, total_stock, available_stock, category } = req.body;
+    const { sku, name, short_description, long_description, total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity } = req.body;
 
     const existingRes = await db.query('SELECT * FROM items WHERE id=$1', [id]);
     if (!existingRes.rows.length) return res.status(404).json({ error: 'Item not found' });
@@ -231,13 +258,46 @@ router.put('/:id', requireCatalogManager, async (req, res) => {
     const newTotal = total_stock !== undefined ? total_stock : existing.total_stock;
     const newAvail = available_stock !== undefined ? available_stock : existing.available_stock;
     const newCat = category !== undefined ? category : existing.category;
+    const parsedAutoAddItemId = auto_add_item_id === undefined
+      ? existing.auto_add_item_id
+      : parseNullablePositiveInt(auto_add_item_id);
+    const parsedAutoAddItemQty = auto_add_item_quantity === undefined
+      ? (existing.auto_add_item_quantity || 1)
+      : parseNullablePositiveInt(auto_add_item_quantity);
+
+    if (auto_add_item_id !== undefined && auto_add_item_id !== null && auto_add_item_id !== '' && parsedAutoAddItemId === null) {
+      return res.status(400).json({ error: 'Invalid auto_add_item_id' });
+    }
+    if (auto_add_item_quantity !== undefined && parsedAutoAddItemQty === null) {
+      return res.status(400).json({ error: 'Invalid auto_add_item_quantity' });
+    }
+    if (parsedAutoAddItemId && parseInt(id, 10) === parsedAutoAddItemId) {
+      return res.status(400).json({ error: 'Item cannot auto-add itself' });
+    }
+    if (parsedAutoAddItemId) {
+      const targetRes = await db.query('SELECT id FROM items WHERE id=$1', [parsedAutoAddItemId]);
+      if (!targetRes.rows.length) {
+        return res.status(400).json({ error: 'auto_add_item_id target not found' });
+      }
+    }
+    const finalAutoAddQty = parsedAutoAddItemId ? (parsedAutoAddItemQty || 1) : 1;
 
     await db.query(
-      `UPDATE items SET sku=$1, name=$2, short_description=$3, long_description=$4, total_stock=$5, available_stock=$6, category=$7, updated_at=now() WHERE id=$8`,
-      [newSku, newName, newShort, newLong, newTotal, newAvail, newCat, id]
+      `UPDATE items
+       SET sku=$1, name=$2, short_description=$3, long_description=$4,
+           total_stock=$5, available_stock=$6, category=$7,
+           auto_add_item_id=$8, auto_add_item_quantity=$9,
+           updated_at=now()
+       WHERE id=$10`,
+      [newSku, newName, newShort, newLong, newTotal, newAvail, newCat, parsedAutoAddItemId, finalAutoAddQty, id]
     );
 
-    const item = (await db.query('SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url, total_stock, available_stock, category FROM items WHERE id=$1', [id])).rows[0];
+    const item = (await db.query(
+      `SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url,
+              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity
+       FROM items WHERE id=$1`,
+      [id]
+    )).rows[0];
     res.json(item);
   } catch (err) {
     console.error('Update item error:', err);
@@ -248,14 +308,45 @@ router.put('/:id', requireCatalogManager, async (req, res) => {
 // POST /api/items - create a new item (catalog manager only)
 router.post('/', requireCatalogManager, async (req, res) => {
   try {
-    const { sku, name, short_description, long_description, total_stock, available_stock, category } = req.body;
+    const { sku, name, short_description, long_description, total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });
     // if sku not provided, generate one from the name and ensure uniqueness
     let finalSku = sku && String(sku).trim() ? String(sku).trim() : await generateSkuFromName(name);
+    const parsedAutoAddItemId = parseNullablePositiveInt(auto_add_item_id);
+    const parsedAutoAddItemQty = parseNullablePositiveInt(auto_add_item_quantity) || 1;
+
+    if (auto_add_item_id !== undefined && auto_add_item_id !== null && auto_add_item_id !== '' && parsedAutoAddItemId === null) {
+      return res.status(400).json({ error: 'Invalid auto_add_item_id' });
+    }
+    if (auto_add_item_quantity !== undefined && parseNullablePositiveInt(auto_add_item_quantity) === null) {
+      return res.status(400).json({ error: 'Invalid auto_add_item_quantity' });
+    }
+    if (parsedAutoAddItemId) {
+      const targetRes = await db.query('SELECT id FROM items WHERE id=$1', [parsedAutoAddItemId]);
+      if (!targetRes.rows.length) {
+        return res.status(400).json({ error: 'auto_add_item_id target not found' });
+      }
+    }
+
     const r = await db.query(
-      `INSERT INTO items (sku, name, short_description, long_description, total_stock, available_stock, category, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7, now(), now()) RETURNING id, sku, name, short_description, long_description, image_url, thumbnail_url, total_stock, available_stock, category`,
-      [finalSku, name, short_description || null, long_description || null, total_stock || 0, available_stock || 0, category || null]
+      `INSERT INTO items (
+         sku, name, short_description, long_description, total_stock, available_stock, category,
+         auto_add_item_id, auto_add_item_quantity, created_at, updated_at
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, now(), now())
+       RETURNING id, sku, name, short_description, long_description, image_url, thumbnail_url,
+                 total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity`,
+      [
+        finalSku,
+        name,
+        short_description || null,
+        long_description || null,
+        total_stock || 0,
+        available_stock || 0,
+        category || null,
+        parsedAutoAddItemId,
+        parsedAutoAddItemQty
+      ]
     );
     res.status(201).json(r.rows[0]);
   } catch (err) {
@@ -297,6 +388,7 @@ router.delete('/:id', requireCatalogManager, async (req, res) => {
       .filter(Boolean);
 
     await client.query('DELETE FROM item_group_items WHERE item_id=$1', [id]);
+    await client.query('UPDATE items SET auto_add_item_id = NULL WHERE auto_add_item_id = $1', [id]);
     await client.query('DELETE FROM item_images WHERE item_id=$1', [id]);
     await client.query('DELETE FROM items WHERE id=$1', [id]);
 

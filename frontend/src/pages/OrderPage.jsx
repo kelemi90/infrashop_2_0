@@ -181,10 +181,69 @@ export default function OrderPage() {
       ...prev,
       [item.id]: {
         ...item,
-        quantity: safeQty
+        quantity: safeQty,
+        autoAddedBySystem: false
       }
     }));
   };
+
+  useEffect(() => {
+    if (!items.length) return;
+
+    const byId = new Map(items.map((it) => [String(it.id), it]));
+    const autoRequired = new Map();
+
+    Object.values(cart).forEach((entry) => {
+      if (!entry || entry.autoAddedBySystem || !entry.quantity || entry.quantity <= 0) return;
+      const source = byId.get(String(entry.id));
+      if (!source || !source.auto_add_item_id) return;
+
+      const target = byId.get(String(source.auto_add_item_id));
+      if (!target) return;
+
+      const mult = Math.max(1, Number(source.auto_add_item_quantity) || 1);
+      const reqQty = Math.min(target.available_stock, entry.quantity * mult);
+      if (reqQty <= 0) return;
+
+      autoRequired.set(target.id, (autoRequired.get(target.id) || 0) + reqQty);
+    });
+
+    setCart((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      autoRequired.forEach((requiredQty, targetId) => {
+        const existing = next[targetId];
+        if (!existing) {
+          const target = byId.get(String(targetId));
+          if (!target) return;
+          next[targetId] = { ...target, quantity: requiredQty, autoAddedBySystem: true };
+          changed = true;
+          return;
+        }
+
+        const nextQty = existing.autoAddedBySystem
+          ? requiredQty
+          : Math.max(existing.quantity || 0, requiredQty);
+        if (nextQty !== existing.quantity || existing.autoAddedBySystem !== true) {
+          next[targetId] = { ...existing, quantity: nextQty, autoAddedBySystem: true };
+          changed = true;
+        }
+      });
+
+      Object.keys(next).forEach((key) => {
+        const row = next[key];
+        if (!row || !row.autoAddedBySystem) return;
+        const needed = autoRequired.get(Number(key)) || 0;
+        if (!needed) {
+          delete next[key];
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [cart, items]);
 
   // add a group bundle to the cart (group_id -> multiplier)
   const addGroupToCart = (groupId, multiplier = 1) => {
@@ -598,7 +657,7 @@ function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, 
 
       {items.map(item => (
         <div key={item.id} className="cart-item">
-          <span>{item.name}</span>
+          <span>{item.name}{item.autoAddedBySystem ? ' (auto)' : ''}</span>
           <span>x {item.quantity}</span>
           <button onClick={() => removeFromCart(item.id)}>✕</button>
         </div>
