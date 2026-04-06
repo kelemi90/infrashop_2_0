@@ -5,10 +5,14 @@ import api from '../api';
 export default function NewItem(){
   const [name, setName] = useState('');
   const [shortDescription, setShortDescription] = useState('');
+  const [longDescription, setLongDescription] = useState('');
   const [totalStock, setTotalStock] = useState(0);
   const [availableStock, setAvailableStock] = useState(0);
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState([]);
+  const [allItems, setAllItems] = useState([]);
+  const [autoAddItemId, setAutoAddItemId] = useState('');
+  const [autoAddItemQuantity, setAutoAddItemQuantity] = useState(1);
   const [message, setMessage] = useState('');
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
@@ -17,6 +21,7 @@ export default function NewItem(){
     let mounted = true;
     api.get('/items').then(r => {
       if (!mounted) return;
+      setAllItems(r.data || []);
       const cats = [...new Set(r.data.map(i => i.category || 'Muut'))];
       setCategories(cats);
     }).catch(() => {});
@@ -31,9 +36,12 @@ export default function NewItem(){
       const payload = {
         name: name.trim(),
         short_description: shortDescription || null,
+        long_description: longDescription || null,
         total_stock: Number(totalStock) || 0,
         available_stock: Number(availableStock) || 0,
-        category: category || null
+        category: category || null,
+        auto_add_item_id: autoAddItemId ? Number(autoAddItemId) : null,
+        auto_add_item_quantity: autoAddItemId ? Math.max(1, Number(autoAddItemQuantity) || 1) : 1
       };
       const res = await api.post('/items', payload);
       setMessage('Item created');
@@ -63,6 +71,11 @@ export default function NewItem(){
             <textarea value={shortDescription} onChange={e=>setShortDescription(e.target.value)} />
           </label>
         </div>
+        <div className="new-item-field">
+          <label>Pitkä kuvaus<br/>
+            <textarea value={longDescription} onChange={e=>setLongDescription(e.target.value)} rows={5} />
+          </label>
+        </div>
         <div style={{ display:'flex', gap:12, marginBottom:8 }}>
           <label>
             Varastossa yhteensä<br/>
@@ -83,6 +96,27 @@ export default function NewItem(){
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
+          </label>
+        </div>
+        <div className="new-item-field">
+          <label>Auto-add second item (optional)<br/>
+            <select value={autoAddItemId} onChange={e => setAutoAddItemId(e.target.value)}>
+              <option value="">No auto-add</option>
+              {allItems.map(i => (
+                <option key={i.id} value={i.id}>{i.name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="new-item-field">
+          <label>Auto-add quantity<br/>
+            <input
+              type="number"
+              min="1"
+              value={autoAddItemQuantity}
+              onChange={e => setAutoAddItemQuantity(e.target.value)}
+              disabled={!autoAddItemId}
+            />
           </label>
         </div>
         <div>

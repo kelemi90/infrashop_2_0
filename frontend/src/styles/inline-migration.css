@@ -300,6 +300,21 @@
   margin-left: 8px;
 }
 
+.item-image-edit-delete-btn {
+  background: #9d1b1b;
+  color: #fff;
+  border: 1px solid #7d1111;
+}
+
+.item-image-edit-delete-btn:hover {
+  background: #7d1111;
+}
+
+.item-image-edit-delete-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .item-image-edit-image-grid {
   display: flex;
   gap: 8px;

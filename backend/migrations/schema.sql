@@ -20,10 +20,18 @@ CREATE TABLE IF NOT EXISTS items (
   thumbnail_url TEXT,
   total_stock INT DEFAULT 0,
   available_stock INT DEFAULT 0,
+  auto_add_item_id INT,
+  auto_add_item_quantity INT NOT NULL DEFAULT 1,
   category TEXT,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
 );
+
+ALTER TABLE items
+  ADD COLUMN IF NOT EXISTS auto_add_item_id INT;
+
+ALTER TABLE items
+  ADD COLUMN IF NOT EXISTS auto_add_item_quantity INT NOT NULL DEFAULT 1;
 
 -- ------------------------------
 -- item_images: tuotteen kuvagalleria

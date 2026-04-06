@@ -9,6 +9,7 @@ export default function ItemImageEdit(){
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
 
@@ -50,9 +51,12 @@ export default function ItemImageEdit(){
         sku: selected.sku || '',
         name: selected.name || '',
         short_description: selected.short_description || '',
+        long_description: selected.long_description || '',
         total_stock: selected.total_stock || 0,
         available_stock: selected.available_stock || 0,
-        category: selected.category || ''
+        category: selected.category || '',
+        auto_add_item_id: selected.auto_add_item_id ? String(selected.auto_add_item_id) : '',
+        auto_add_item_quantity: selected.auto_add_item_quantity || 1
       });
     }
   }, [selected]);
@@ -70,6 +74,27 @@ export default function ItemImageEdit(){
     } catch (err) {
       console.error(err);
       setMessage(err.response?.data?.error || 'Update failed');
+    }
+  };
+
+  const deleteItem = async () => {
+    if (!selected || deleting) return;
+    const confirmed = window.confirm(`Poistetaanko tuote \"${selected.name}\"? Tätä ei voi perua.`);
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      await api.delete(`/items/${selected.id}`);
+      setItems((prev) => prev.filter((it) => it.id !== selected.id));
+      setSelected(null);
+      setEditMode(false);
+      setFiles([]);
+      setMessage('Item deleted');
+    } catch (err) {
+      console.error(err);
+      setMessage(err.response?.data?.error || 'Delete failed');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -136,6 +161,9 @@ export default function ItemImageEdit(){
               <h3>{selected.name}</h3>
               <div className="item-image-edit-mt8">
                 <button onClick={()=>{ setEditMode(em => !em); setMessage(''); }} className="item-image-edit-mr8">{editMode ? 'Cancel edit' : 'Edit item'}</button>
+                <button onClick={deleteItem} className="item-image-edit-delete-btn" disabled={deleting || uploading}>
+                  {deleting ? 'Deleting...' : 'Delete item'}
+                </button>
               </div>
               {editMode && (
                 <div className="edit-box">
@@ -159,9 +187,46 @@ export default function ItemImageEdit(){
                   </div>
 
                   <div className="edit-row">
+                    <div className="edit-label">Auto-add second item:</div>
+                    <div className="edit-field">
+                      <select
+                        value={editValues.auto_add_item_id || ''}
+                        onChange={e => setEditValues(v => ({ ...v, auto_add_item_id: e.target.value }))}
+                      >
+                        <option value="">No auto-add</option>
+                        {items
+                          .filter((it) => String(it.id) !== String(selected.id))
+                          .map((it) => (
+                            <option key={it.id} value={it.id}>{it.name}</option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="edit-row">
+                    <div className="edit-label">Auto-add quantity:</div>
+                    <div className="edit-field small">
+                      <input
+                        type="number"
+                        min="1"
+                        value={editValues.auto_add_item_quantity || 1}
+                        onChange={e => setEditValues(v => ({ ...v, auto_add_item_quantity: Number(e.target.value) || 1 }))}
+                        disabled={!editValues.auto_add_item_id}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="edit-row">
                     <div className="edit-label">Lyhyt kuvaus:</div>
                     <div className="edit-field">
                       <textarea value={editValues.short_description} onChange={e=>setEditValues(v=>({...v, short_description: e.target.value}))} />
+                    </div>
+                  </div>
+
+                  <div className="edit-row">
+                    <div className="edit-label">Pitkä kuvaus:</div>
+                    <div className="edit-field">
+                      <textarea value={editValues.long_description} onChange={e=>setEditValues(v=>({...v, long_description: e.target.value}))} rows={5} />
                     </div>
                   </div>
 
