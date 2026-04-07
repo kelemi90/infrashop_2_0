@@ -1,6 +1,10 @@
 # To create a moderator account from the backend, use:
-```sudo -u infrashop bash -lc "cd /srv/infrashop/backend && ADMIN_EMAIL=moderator@example.com ADMIN_PASSWORD='<MODERATOR_PASSWORD>' ADMIN_DISPLAY_NAME='Moderator' npm run create_moderator"```
+```bash
+sudo -u infrashop bash -lc "set -a; [ -f /srv/infrashop/.env ] && . /srv/infrashop/.env; [ -f /srv/infrashop/backend/.env ] && . /srv/infrashop/backend/.env; set +a; cd /srv/infrashop/backend && DB_HOST=127.0.0.1 ADMIN_EMAIL=moderator@example.com ADMIN_PASSWORD='<MODERATOR_PASSWORD>' ADMIN_DISPLAY_NAME='Moderator' npm run create_moderator"
+```
 
 # To create or update an admin account with the same path, use:
 
-```sudo -u infrashop bash -lc "cd /srv/infrashop/backend && ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='<ADMIN_PASSWORD>' ADMIN_DISPLAY_NAME='Admin' npm run create_admin"```
+```bash
+sudo -u infrashop bash -lc "set -a; [ -f /srv/infrashop/.env ] && . /srv/infrashop/.env; [ -f /srv/infrashop/backend/.env ] && . /srv/infrashop/backend/.env; set +a; cd /srv/infrashop/backend && DB_HOST=127.0.0.1 ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='<ADMIN_PASSWORD>' ADMIN_DISPLAY_NAME='Admin' npm run create_admin"
+```
