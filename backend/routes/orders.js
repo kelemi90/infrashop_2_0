@@ -660,7 +660,8 @@ router.get('/', async (req, res) => {
         o.delivery_start,
         o.return_at,
         o.status,
-        o.created_at
+        o.created_at,
+        o.updated_at
       FROM orders o
       ORDER BY o.created_at DESC
     `);
