@@ -50,6 +50,14 @@ export default function HomePage() {
       catalogManagerOnly: true
     },
     {
+      key: 'change-password',
+      to: '/change-password',
+      title: 'Vaihda salasana',
+      description: 'Vaihda oma ylläpitäjän tai moderaattorin salasana',
+      catalogManagerOnly: true,
+      loggedInOnly: true
+    },
+    {
       key: 'archive',
       to: '/archive',
       title: 'Arkisto',

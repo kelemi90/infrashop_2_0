@@ -38,6 +38,7 @@ export default function Header() {
           <>
             <NavLink to="/admin">Muokkaa</NavLink>
             <NavLink to="/admin/items/images" className="admin-btn">Kuvat</NavLink>
+            <NavLink to="/change-password" className="admin-compact-btn">Salasana</NavLink>
             {/* <NavLink to="/admin/items/new" className="admin-btn">Uusi tuote</NavLink> */}
             <button className="admin-shortcut" title="Quick create" aria-label="Quick create item" onClick={() => setShowQuickCreate(true)}>+</button>
           </>

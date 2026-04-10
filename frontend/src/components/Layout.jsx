@@ -52,6 +52,7 @@ export default function Layout() {
                   <span className="muted">tuotepakettia</span>
                 </NavLink>
                 <NavLink to="/admin/items/images" className="admin-btn">Kuvat</NavLink>
+                <NavLink to="/change-password" className="admin-compact-btn">Salasana</NavLink>
                 <button className="admin-shortcut" title="Quick create" aria-label="Quick create item" onClick={() => setShowQuickCreate(true)}>+</button>
               </>
             )}

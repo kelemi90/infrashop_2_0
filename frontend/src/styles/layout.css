@@ -73,6 +73,23 @@
   text-decoration: underline;
 }
 
+.nav .admin-compact-btn {
+  margin-left: 4px;
+  padding: 4px 7px;
+  border-radius: 10px;
+  border: 1px solid rgba(229, 231, 235, 0.35);
+  color: #e5e7eb;
+  font-size: 0.8rem;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.nav .admin-compact-btn:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+}
+
 /* small circular shortcut next to admin links */
 .nav .admin-shortcut {
   margin-left: 6px;
