@@ -14,6 +14,7 @@ import ArchivePage from './pages/ArchivePage';
 import OrdersPage from './pages/OrdersPage';
 import EditOrderPage from './pages/EditOrderPage';
 import LoginPage from './pages/LoginPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import ReportsPage from './pages/ReportsPage';
 import Layout from './components/Layout';
 import AdminEvents from './pages/AdminEvents';
@@ -29,6 +30,7 @@ export default function App() {
       {/* Kaikki muut sivut layoutin sisällä */}
       <Route element={<Layout />}>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/change-password" element={<RequireAdmin allowedRoles={[ROLE_ADMIN, ROLE_MODERATOR]}><ChangePasswordPage /></RequireAdmin>} />
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/items/:id" element={<ItemDetail />} />
         <Route path="/order" element={<OrderPage />} />

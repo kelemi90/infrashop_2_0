@@ -8,7 +8,8 @@
         "migrate:apply": "node scripts/apply_schema.js",
         "create_user": "node scripts/create_admin.js",
         "create_admin": "ADMIN_ROLE=admin node scripts/create_admin.js",
-        "create_moderator": "ADMIN_ROLE=moderator node scripts/create_admin.js"
+        "create_moderator": "ADMIN_ROLE=moderator node scripts/create_admin.js",
+        "test:change_password": "node tests/test_auth_change_password.js"
     },
     "dependencies": {
         "bcrypt": "^6.0.0",
