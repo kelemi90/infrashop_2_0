@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom';
 import '../styles/home.css';
-import { canManageCatalog, isAdmin } from '../utils/roles';
+import { canManageCatalog, getSessionUser, isAdmin } from '../utils/roles';
 
 export default function HomePage() {
   const loggedIn = (typeof window !== 'undefined') && Boolean(sessionStorage.getItem('token'));
-  let user = null;
-  try { user = typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('user') || 'null') : null; } catch (e) { user = null; }
+  const user = getSessionUser();
   const canManage = canManageCatalog(user);
   const adminOnly = isAdmin(user);
 
