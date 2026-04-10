@@ -1,12 +1,23 @@
+# Password characters
+Passwords can include special characters (for example: !ÄÖ¤#"!%&/()=?\€$£@).
+
 # To create a moderator account from the backend, use:
 ```bash
-sudo -u infrashop bash -lc "set -a; [ -f /srv/infrashop/.env ] && . /srv/infrashop/.env; [ -f /srv/infrashop/backend/.env ] && . /srv/infrashop/backend/.env; set +a; cd /srv/infrashop/backend && DB_HOST=127.0.0.1 ADMIN_EMAIL=moderator@example.com ADMIN_PASSWORD='<MODERATOR_PASSWORD>' ADMIN_DISPLAY_NAME='Moderator' npm run create_moderator"
+sudo -u infrashop env \
+	ADMIN_EMAIL='moderator@example.com' \
+	ADMIN_PASSWORD='<MODERATOR_PASSWORD>' \
+	ADMIN_DISPLAY_NAME='Moderator' \
+	bash -lc "set -a; [ -f /srv/infrashop/.env ] && . /srv/infrashop/.env; [ -f /srv/infrashop/backend/.env ] && . /srv/infrashop/backend/.env; set +a; cd /srv/infrashop/backend && DB_HOST=127.0.0.1 npm run create_moderator"
 ```
 
 # To create or update an admin account with the same path, use:
 
 ```bash
-sudo -u infrashop bash -lc "set -a; [ -f /srv/infrashop/.env ] && . /srv/infrashop/.env; [ -f /srv/infrashop/backend/.env ] && . /srv/infrashop/backend/.env; set +a; cd /srv/infrashop/backend && DB_HOST=127.0.0.1 ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='<ADMIN_PASSWORD>' ADMIN_DISPLAY_NAME='Admin' npm run create_admin"
+sudo -u infrashop env \
+	ADMIN_EMAIL='admin@example.com' \
+	ADMIN_PASSWORD='<ADMIN_PASSWORD>' \
+	ADMIN_DISPLAY_NAME='Admin' \
+	bash -lc "set -a; [ -f /srv/infrashop/.env ] && . /srv/infrashop/.env; [ -f /srv/infrashop/backend/.env ] && . /srv/infrashop/backend/.env; set +a; cd /srv/infrashop/backend && DB_HOST=127.0.0.1 npm run create_admin"
 ```
 
 # Run POST test

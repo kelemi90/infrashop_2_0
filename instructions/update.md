@@ -25,8 +25,17 @@ sudo journalctl -u infrashop-backend.service -n 80 --no-pager
 
 ## Create backend-managed users
 ```bash
-sudo -u infrashop bash -lc "cd /srv/infrashop/backend && ADMIN_EMAIL=moderator@example.com ADMIN_PASSWORD='<MODERATOR_PASSWORD>' ADMIN_DISPLAY_NAME='Moderator' npm run create_moderator"
-sudo -u infrashop bash -lc "cd /srv/infrashop/backend && ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='<ADMIN_PASSWORD>' ADMIN_DISPLAY_NAME='Admin' npm run create_admin"
+sudo -u infrashop env \
+	ADMIN_EMAIL='moderator@example.com' \
+	ADMIN_PASSWORD='<MODERATOR_PASSWORD>' \
+	ADMIN_DISPLAY_NAME='Moderator' \
+	bash -lc "cd /srv/infrashop/backend && npm run create_moderator"
+
+sudo -u infrashop env \
+	ADMIN_EMAIL='admin@example.com' \
+	ADMIN_PASSWORD='<ADMIN_PASSWORD>' \
+	ADMIN_DISPLAY_NAME='Admin' \
+	bash -lc "cd /srv/infrashop/backend && npm run create_admin"
 ```
 ## Backend (manual fallback, if service is not used)
 ```bash
