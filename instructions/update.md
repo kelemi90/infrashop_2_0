@@ -10,7 +10,10 @@ sudo chown -R www-data:www-data /var/www/infrashop
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-```sudo -u infrashop bash -lc "cd /srv/infrashop/frontend && npm run build" && sudo rm -rf /var/www/infrashop/* && sudo cp -r /srv/infrashop/frontend/dist/* /var/www/infrashop/ && sudo chown -R www-data:www-data /var/www/infrashop && sudo nginx -t && sudo systemctl reload nginx```
+```bash
+sudo chown -R infrashop:infrashop /srv/infrashop/frontend/dist || true
+sudo -u infrashop bash -lc "cd /srv/infrashop/frontend && rm -rf dist && npm run build" && sudo rm -rf /var/www/infrashop/* && sudo cp -r /srv/infrashop/frontend/dist/* /var/www/infrashop/ && sudo chown -R www-data:www-data /var/www/infrashop && sudo nginx -t && sudo systemctl reload nginx
+```
 
 ## Backend (recommended: systemd service)
 ```bash
