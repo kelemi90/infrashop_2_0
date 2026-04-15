@@ -557,9 +557,12 @@ router.patch('/:id', async (req, res) => {
       const newMap = new Map();
       const newIds = [];
       for (const it of items) {
+        if (it.item_id === null || it.item_id === undefined || it.item_id === '') {
+          throw new Error('Virheellinen item_id tai quantity');
+        }
         const iid = parseInt(it.item_id, 10);
         const qty = parseInt(it.quantity, 10) || 0;
-        if (!iid || qty < 0) {
+        if (isNaN(iid) || iid <= 0 || qty < 0) {
           throw new Error('Virheellinen item_id tai quantity');
         }
         newMap.set(iid, qty);
@@ -588,7 +591,7 @@ router.patch('/:id', async (req, res) => {
 
         // apply stock changes and audits
         // Actor: prefer authenticated user id/email, otherwise use provided customer_name so audits are meaningful
-        const actor = reqUser ? (reqUser.id || reqUser.email) : (providedName || null);
+        const actor = reqUser ? (reqUser.id || reqUser.email) : (providedNameRaw || null);
         for (const id of affected) {
           const oldQty = oldMap.get(id) || 0;
           const newQty = newMap.get(id) || 0;
