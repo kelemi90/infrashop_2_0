@@ -57,7 +57,7 @@ function requiredRequirementKeys(cartItems) {
   for (const item of cartItems) {
     const nn = normalizeItemName(item.name);
     if (POWER_ITEMS.has(nn)) keys.add('power');
-    if (NETWORK_ITEMS.has(nn)) keys.add('network');
+    if (NETWORK_ITEMS.has(nn) || normalizeItemName(item.category) === 'verkko') keys.add('network');
     if (LIGHTING_ITEMS.has(nn)) keys.add('lighting');
     if (isTvRequirementItem(item.name)) keys.add('tv');
   }
@@ -67,7 +67,7 @@ function requiredRequirementKeys(cartItems) {
 function selectedGroupRequirementItems(cartGroups, groupItemsById) {
   const selectedGroups = Object.entries(cartGroups || {}).filter(([, mult]) => mult > 0);
   return selectedGroups.flatMap(([gid]) =>
-    ((groupItemsById && groupItemsById[gid]) || []).map((it) => ({ name: it.name }))
+    ((groupItemsById && groupItemsById[gid]) || []).map((it) => ({ name: it.name, category: it.category }))
   );
 }
 
@@ -90,6 +90,7 @@ export default function OrderPage() {
   const [groupItemsById, setGroupItemsById] = useState({});
   const [cart, setCart] = useState({});
   const [cartGroups, setCartGroups] = useState({});
+  const [autoAddOptOut, setAutoAddOptOut] = useState({});
   const [specialRequirements, setSpecialRequirements] = useState({
     power: '',
     network: '',
@@ -177,6 +178,14 @@ export default function OrderPage() {
 
   const addToCart = (item, qty) => {
     const safeQty = Math.min(Math.max(qty, 0), item.available_stock);
+    if (safeQty > 0) {
+      setAutoAddOptOut((prev) => {
+        if (!prev[item.id]) return prev;
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    }
     setCart(prev => ({
       ...prev,
       [item.id]: {
@@ -200,6 +209,7 @@ export default function OrderPage() {
 
       const target = byId.get(String(source.auto_add_item_id));
       if (!target) return;
+      if (autoAddOptOut[target.id]) return;
 
       const mult = Math.max(1, Number(source.auto_add_item_quantity) || 1);
       const reqQty = Math.min(target.available_stock, entry.quantity * mult);
@@ -243,7 +253,7 @@ export default function OrderPage() {
 
       return changed ? next : prev;
     });
-  }, [cart, items]);
+  }, [cart, items, autoAddOptOut]);
 
   // add a group bundle to the cart (group_id -> multiplier)
   const addGroupToCart = (groupId, multiplier = 1) => {
@@ -251,6 +261,10 @@ export default function OrderPage() {
   };
 
   const removeFromCart = (itemId) => {
+    const row = cart[itemId];
+    if (row && row.autoAddedBySystem) {
+      setAutoAddOptOut((prev) => ({ ...prev, [itemId]: true }));
+    }
     const copy = { ...cart };
     delete copy[itemId];
     setCart(copy);
@@ -314,6 +328,9 @@ export default function OrderPage() {
         lighting: specialRequirements.lighting,
         tv: specialRequirements.tv
       },
+      autoAddOptOutItemIds: Object.keys(autoAddOptOut)
+        .filter((id) => autoAddOptOut[id])
+        .map((id) => Number(id)),
       openComment
     };
 
@@ -328,6 +345,7 @@ export default function OrderPage() {
       setError('');
       setCart({});
       setCartGroups({});
+      setAutoAddOptOut({});
       setStepCompleted(false);
       setSpecialRequirements({ power: '', network: '', lighting: '', tv: '' });
       setOpenComment('');
