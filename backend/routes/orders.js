@@ -333,13 +333,20 @@ router.post('/', async (req, res) => {
       for (const gl of groupLines) {
         const g = groupById.get(gl.group_id);
         const groupName = g ? g.name : `Group ${gl.group_id}`;
+        const members = groupMembers.filter(m => m.group_id === gl.group_id);
+
+        if (!members.length) {
+          throw new Error(`Group has no items: ${gl.group_id}`);
+        }
+
+        // order_items.item_id is NOT NULL, so header rows need a concrete item id.
+        // Use a representative member id and keep quantity at 0 so stock/accounting are unaffected.
+        const headerItemId = members[0].item_id;
         const headerRes = await client.query(
           `INSERT INTO order_items (order_id, item_id, item_name, sku, quantity, group_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-          [orderId, null, groupName, null, gl.multiplier, gl.group_id]
+          [orderId, headerItemId, groupName, null, 0, gl.group_id]
         );
         const headerId = headerRes.rows[0].id;
-
-        const members = groupMembers.filter(m => m.group_id === gl.group_id);
         for (const m of members) {
           const qty = m.quantity * gl.multiplier;
           const itemRow = rowsById.get(m.item_id);
