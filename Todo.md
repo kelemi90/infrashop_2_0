@@ -1,16 +1,16 @@
 # Todo
 
-- [] Lamppuja tilanteessa tulee TV lisätietoboksi -> ei ole oikea
+- [ ] Lamppuja tilanteessa tulee TV lisätietoboksi -> ei ole oikea
 
-- [] Verkon ohjeistus
+- [ ] Verkon ohjeistus
 
-- [] tilausta muokatessa listalta itemiä klikkaamalla saisi tuotteen auki
+- [ ] tilausta muokatessa listalta itemiä klikkaamalla saisi tuotteen auki
  pystysköhän tuossa oleen joku tapa tuotelistasta lisätä tuote tiettyyn tilaukseen
 
-- [] "kylmälaari" -> juomalaari
+- [ ] "kylmälaari" -> juomalaari
 
-- [] kahvinkeitin listalle
+- [ ] kahvinkeitin listalle
 
-- [] kiertoilmauunille kuva
+- [ ] kiertoilmauunille kuva
 
-- [] ledi tussitaulut tilattavaksi
+- [ ] ledi tussitaulut tilattavaksi
