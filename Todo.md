@@ -14,3 +14,5 @@
 - [ ] kiertoilmauunille kuva
 
 - [ ] ledi tussitaulut tilattavaksi
+
+- [ ] Valkokankailla lisää
