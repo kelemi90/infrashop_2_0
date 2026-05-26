@@ -25,6 +25,30 @@ export default function OrdersPage(){
         loadOrders();
     }, []);
 
+    const parseTimestamp = (value) => {
+        if (!value) return null;
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date;
+    };
+
+    const getOrderTimestampMeta = (order) => {
+        const createdAt = parseTimestamp(order?.created_at);
+        const updatedAt = parseTimestamp(order?.updated_at);
+        if (!createdAt && !updatedAt) {
+            return { label: 'Aika', value: '-' };
+        }
+        if (createdAt && updatedAt && updatedAt.getTime() > createdAt.getTime()) {
+            return {
+                label: 'Muokattu',
+                value: updatedAt.toLocaleString('fi-FI')
+            };
+        }
+        return {
+            label: 'Luotu',
+            value: (createdAt || updatedAt).toLocaleString('fi-FI')
+        };
+    };
+
     const parseRequirements = (value) => {
         if (!value) return null;
         if (typeof value === 'object') return value;
@@ -91,12 +115,15 @@ export default function OrdersPage(){
                         <th>Toimituspiste</th>
                         <th>Palautus</th>
                         <th>Status</th>
+                        <th>Aikaleima</th>
                         <th>Toiminnot</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    {orders.map(o => (
+                    {orders.map(o => {
+                        const timeMeta = getOrderTimestampMeta(o);
+                        return (
                         <tr key={o.id}>
                             <td>{o.id}</td>
                             <td>{o.customer_name}</td>
@@ -104,6 +131,7 @@ export default function OrdersPage(){
                             <td>{o.delivery_point}</td>
                             <td>{o.return_at?.slice(0,10)}</td>
                             <td>{o.status}</td>
+                            <td>{timeMeta.label}: {timeMeta.value}</td>
                             <td className="orders-actions">
                                 <button onClick={() => openOrder(o)} disabled={viewLoading}>
                                     Avaa
@@ -115,7 +143,7 @@ export default function OrdersPage(){
                                 )}
                             </td>
                         </tr>
-                    ))}
+                    )})}
                 </tbody>
             </table>
 
@@ -139,6 +167,10 @@ export default function OrdersPage(){
                             <div><strong>Toimituspiste:</strong> {viewingOrder.order.delivery_point || '-'}</div>
                             <div><strong>Palautus:</strong> {viewingOrder.order.return_at?.slice(0, 10) || '-'}</div>
                             <div><strong>Status:</strong> {viewingOrder.order.status || '-'}</div>
+                            {(() => {
+                                const timeMeta = getOrderTimestampMeta(viewingOrder.order);
+                                return <div><strong>{timeMeta.label}:</strong> {timeMeta.value}</div>;
+                            })()}
                         </div>
 
                         {viewingOrder.order.open_comment && (

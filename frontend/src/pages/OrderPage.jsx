@@ -57,7 +57,7 @@ function requiredRequirementKeys(cartItems) {
   for (const item of cartItems) {
     const nn = normalizeItemName(item.name);
     if (POWER_ITEMS.has(nn)) keys.add('power');
-    if (NETWORK_ITEMS.has(nn)) keys.add('network');
+    if (NETWORK_ITEMS.has(nn) || normalizeItemName(item.category) === 'verkko') keys.add('network');
     if (LIGHTING_ITEMS.has(nn)) keys.add('lighting');
     if (isTvRequirementItem(item.name)) keys.add('tv');
   }
@@ -67,7 +67,7 @@ function requiredRequirementKeys(cartItems) {
 function selectedGroupRequirementItems(cartGroups, groupItemsById) {
   const selectedGroups = Object.entries(cartGroups || {}).filter(([, mult]) => mult > 0);
   return selectedGroups.flatMap(([gid]) =>
-    ((groupItemsById && groupItemsById[gid]) || []).map((it) => ({ name: it.name }))
+    ((groupItemsById && groupItemsById[gid]) || []).map((it) => ({ name: it.name, category: it.category }))
   );
 }
 
@@ -90,6 +90,7 @@ export default function OrderPage() {
   const [groupItemsById, setGroupItemsById] = useState({});
   const [cart, setCart] = useState({});
   const [cartGroups, setCartGroups] = useState({});
+  const [autoAddOptOut, setAutoAddOptOut] = useState({});
   const [specialRequirements, setSpecialRequirements] = useState({
     power: '',
     network: '',
@@ -177,14 +178,82 @@ export default function OrderPage() {
 
   const addToCart = (item, qty) => {
     const safeQty = Math.min(Math.max(qty, 0), item.available_stock);
+    if (safeQty > 0) {
+      setAutoAddOptOut((prev) => {
+        if (!prev[item.id]) return prev;
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    }
     setCart(prev => ({
       ...prev,
       [item.id]: {
         ...item,
-        quantity: safeQty
+        quantity: safeQty,
+        autoAddedBySystem: false
       }
     }));
   };
+
+  useEffect(() => {
+    if (!items.length) return;
+
+    const byId = new Map(items.map((it) => [String(it.id), it]));
+    const autoRequired = new Map();
+
+    Object.values(cart).forEach((entry) => {
+      if (!entry || entry.autoAddedBySystem || !entry.quantity || entry.quantity <= 0) return;
+      const source = byId.get(String(entry.id));
+      if (!source || !source.auto_add_item_id) return;
+
+      const target = byId.get(String(source.auto_add_item_id));
+      if (!target) return;
+      if (autoAddOptOut[target.id]) return;
+
+      const mult = Math.max(1, Number(source.auto_add_item_quantity) || 1);
+      const reqQty = Math.min(target.available_stock, entry.quantity * mult);
+      if (reqQty <= 0) return;
+
+      autoRequired.set(target.id, (autoRequired.get(target.id) || 0) + reqQty);
+    });
+
+    setCart((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      autoRequired.forEach((requiredQty, targetId) => {
+        const existing = next[targetId];
+        if (!existing) {
+          const target = byId.get(String(targetId));
+          if (!target) return;
+          next[targetId] = { ...target, quantity: requiredQty, autoAddedBySystem: true };
+          changed = true;
+          return;
+        }
+
+        const nextQty = existing.autoAddedBySystem
+          ? requiredQty
+          : Math.max(existing.quantity || 0, requiredQty);
+        if (nextQty !== existing.quantity || existing.autoAddedBySystem !== true) {
+          next[targetId] = { ...existing, quantity: nextQty, autoAddedBySystem: true };
+          changed = true;
+        }
+      });
+
+      Object.keys(next).forEach((key) => {
+        const row = next[key];
+        if (!row || !row.autoAddedBySystem) return;
+        const needed = autoRequired.get(Number(key)) || 0;
+        if (!needed) {
+          delete next[key];
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [cart, items, autoAddOptOut]);
 
   // add a group bundle to the cart (group_id -> multiplier)
   const addGroupToCart = (groupId, multiplier = 1) => {
@@ -192,6 +261,10 @@ export default function OrderPage() {
   };
 
   const removeFromCart = (itemId) => {
+    const row = cart[itemId];
+    if (row && row.autoAddedBySystem) {
+      setAutoAddOptOut((prev) => ({ ...prev, [itemId]: true }));
+    }
     const copy = { ...cart };
     delete copy[itemId];
     setCart(copy);
@@ -255,6 +328,9 @@ export default function OrderPage() {
         lighting: specialRequirements.lighting,
         tv: specialRequirements.tv
       },
+      autoAddOptOutItemIds: Object.keys(autoAddOptOut)
+        .filter((id) => autoAddOptOut[id])
+        .map((id) => Number(id)),
       openComment
     };
 
@@ -269,6 +345,7 @@ export default function OrderPage() {
       setError('');
       setCart({});
       setCartGroups({});
+      setAutoAddOptOut({});
       setStepCompleted(false);
       setSpecialRequirements({ power: '', network: '', lighting: '', tv: '' });
       setOpenComment('');
@@ -598,7 +675,7 @@ function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, 
 
       {items.map(item => (
         <div key={item.id} className="cart-item">
-          <span>{item.name}</span>
+          <span>{item.name}{item.autoAddedBySystem ? ' (auto)' : ''}</span>
           <span>x {item.quantity}</span>
           <button onClick={() => removeFromCart(item.id)}>✕</button>
         </div>

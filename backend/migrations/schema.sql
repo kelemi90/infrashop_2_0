@@ -20,10 +20,18 @@ CREATE TABLE IF NOT EXISTS items (
   thumbnail_url TEXT,
   total_stock INT DEFAULT 0,
   available_stock INT DEFAULT 0,
+  auto_add_item_id INT,
+  auto_add_item_quantity INT NOT NULL DEFAULT 1,
   category TEXT,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
 );
+
+ALTER TABLE items
+  ADD COLUMN IF NOT EXISTS auto_add_item_id INT;
+
+ALTER TABLE items
+  ADD COLUMN IF NOT EXISTS auto_add_item_quantity INT NOT NULL DEFAULT 1;
 
 -- ------------------------------
 -- item_images: tuotteen kuvagalleria
@@ -104,7 +112,7 @@ ALTER TABLE orders
 CREATE TABLE IF NOT EXISTS order_items (
   id SERIAL PRIMARY KEY,
   order_id INT REFERENCES orders(id) ON DELETE CASCADE,
-  item_id INT REFERENCES items(id),
+  item_id INT NOT NULL REFERENCES items(id),
 
   item_name TEXT NOT NULL, -- snapshot!
   sku TEXT,

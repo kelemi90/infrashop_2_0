@@ -10,10 +10,18 @@ sudo chown -R www-data:www-data /var/www/infrashop
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-```sudo -u infrashop bash -lc "cd /srv/infrashop/frontend && npm run build" && sudo rm -rf /var/www/infrashop/* && sudo cp -r /srv/infrashop/frontend/dist/* /var/www/infrashop/ && sudo chown -R www-data:www-data /var/www/infrashop && sudo nginx -t && sudo systemctl reload nginx```
+```bash
+sudo chown -R infrashop:infrashop /srv/infrashop/frontend/dist || true
+sudo -u infrashop bash -lc "cd /srv/infrashop/frontend && rm -rf dist && npm run build" && sudo rm -rf /var/www/infrashop/* && sudo cp -r /srv/infrashop/frontend/dist/* /var/www/infrashop/ && sudo chown -R www-data:www-data /var/www/infrashop && sudo nginx -t && sudo systemctl reload nginx
+```
+
+```bash
+sudo -u infrashop bash -lc "cd /srv/infrashop/frontend && npm run build" && sudo rm -rf /var/www/infrashop/* && sudo cp -r /srv/infrashop/frontend/dist/* /var/www/infrashop/ && sudo chown -R www-data:www-data /var/www/infrashop && sudo nginx -t && sudo systemctl reload nginx
+```
 
 ## Backend (recommended: systemd service)
 ```bash
+sudo -u infrashop bash -lc "cd /srv/infrashop/backend && npm run migrate:apply" # <Run after pulling backend changes>
 sudo systemctl restart infrashop-backend.service # <This is important>
 sudo systemctl status infrashop-backend.service --no-pager -l # <This is important>
 sudo journalctl -u infrashop-backend.service -n 80 --no-pager
@@ -21,8 +29,17 @@ sudo journalctl -u infrashop-backend.service -n 80 --no-pager
 
 ## Create backend-managed users
 ```bash
-sudo -u infrashop bash -lc "cd /srv/infrashop/backend && ADMIN_EMAIL=moderator@example.com ADMIN_PASSWORD='<MODERATOR_PASSWORD>' ADMIN_DISPLAY_NAME='Moderator' npm run create_moderator"
-sudo -u infrashop bash -lc "cd /srv/infrashop/backend && ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='<ADMIN_PASSWORD>' ADMIN_DISPLAY_NAME='Admin' npm run create_admin"
+sudo -u infrashop env \
+	ADMIN_EMAIL='moderator@example.com' \
+	ADMIN_PASSWORD='<MODERATOR_PASSWORD>' \
+	ADMIN_DISPLAY_NAME='Moderator' \
+	bash -lc "cd /srv/infrashop/backend && npm run create_moderator"
+
+sudo -u infrashop env \
+	ADMIN_EMAIL='admin@example.com' \
+	ADMIN_PASSWORD='<ADMIN_PASSWORD>' \
+	ADMIN_DISPLAY_NAME='Admin' \
+	bash -lc "cd /srv/infrashop/backend && npm run create_admin"
 ```
 ## Backend (manual fallback, if service is not used)
 ```bash

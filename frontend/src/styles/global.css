@@ -26,3 +26,40 @@ a {
 button {
   font-family: inherit;
 }
+
+.change-password-page-card {
+  max-width: 520px;
+  margin: 2rem auto;
+  padding: 1rem;
+  border: 1px solid #4a4a4a;
+  border-radius: 10px;
+  background: #2b2b2b;
+}
+
+.change-password-page-field {
+  margin-bottom: 0.9rem;
+}
+
+.change-password-page-field input {
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.5rem;
+}
+
+.change-password-page-error {
+  background: #5a1f1f;
+  color: #ffd6d6;
+  border: 1px solid #7a2a2a;
+  padding: 0.6rem;
+  border-radius: 8px;
+  margin-bottom: 0.8rem;
+}
+
+.change-password-page-success {
+  background: #1f5a31;
+  color: #d8ffe4;
+  border: 1px solid #2a7a42;
+  padding: 0.6rem;
+  border-radius: 8px;
+  margin-bottom: 0.8rem;
+}
