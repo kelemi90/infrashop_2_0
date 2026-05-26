@@ -17,6 +17,8 @@ backend/node_modules/
 # Backup env files created by rotation script
 .env.*.bak
 
+# Images
+backend/public/images
 
 # Logs
 npm-debug.log*
