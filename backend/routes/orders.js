@@ -27,6 +27,12 @@ function isTvRequirementItem(value) {
   return normalizeItemName(value).includes('tv');
 }
 
+function isNetworkRequirementItem(value) {
+  const nn = normalizeItemName(value);
+  // Keep exact matches for known names and also catch generic/variant Verkko labels.
+  return NETWORK_ITEMS.has(nn) || nn.includes('verkko');
+}
+
 function normalizeItemName(value) {
   if (!value) return '';
   try {
@@ -45,7 +51,7 @@ function requiredRequirementKeysFromItems(itemNames) {
   for (const n of itemNames) {
     const nn = normalizeItemName(n);
     if (POWER_ITEMS.has(nn)) keys.add('power');
-    if (NETWORK_ITEMS.has(nn)) keys.add('network');
+    if (isNetworkRequirementItem(n)) keys.add('network');
     if (LIGHTING_ITEMS.has(nn)) keys.add('lighting');
     if (isTvRequirementItem(n)) keys.add('tv');
   }
@@ -114,7 +120,7 @@ function requireAdmin(req, res, next) {
 // - event_id on pakollinen, jotta tilaus voidaan arkistoida tapahtumaan
 // =======================
 router.post('/', async (req, res) => {
-  const { name, organization, deliveryPoint, returnAt, items, eventId, specialRequirements, openComment } = req.body || {};
+  const { name, organization, deliveryPoint, returnAt, items, eventId, specialRequirements, openComment, autoAddOptOutItemIds } = req.body || {};
 
   if (!name || !organization || !deliveryPoint || !returnAt) {
     return res.status(400).json({ error: 'Pakollisia kenttiä puuttuu' });
@@ -159,6 +165,13 @@ router.post('/', async (req, res) => {
   for (const it of plainItems) {
     plainItemMap.set(it.item_id, (plainItemMap.get(it.item_id) || 0) + it.quantity);
   }
+
+  // Caller may explicitly opt out specific auto-added target items.
+  const autoAddOptOutSet = new Set(
+    (Array.isArray(autoAddOptOutItemIds) ? autoAddOptOutItemIds : [])
+      .map((v) => parseInt(v, 10))
+      .filter((v) => Number.isInteger(v) && v > 0)
+  );
 
   const client = await db.connect();
   try {
@@ -215,6 +228,7 @@ router.post('/', async (req, res) => {
         const targetId = row.auto_add_item_id;
         const mult = parseInt(row.auto_add_item_quantity, 10) || 1;
         if (!sourceQty || !targetId || mult <= 0) continue;
+        if (autoAddOptOutSet.has(targetId)) continue;
         const autoQty = sourceQty * mult;
         plainItemMap.set(targetId, (plainItemMap.get(targetId) || 0) + autoQty);
       }
@@ -319,13 +333,20 @@ router.post('/', async (req, res) => {
       for (const gl of groupLines) {
         const g = groupById.get(gl.group_id);
         const groupName = g ? g.name : `Group ${gl.group_id}`;
+        const members = groupMembers.filter(m => m.group_id === gl.group_id);
+
+        if (!members.length) {
+          throw new Error(`Group has no items: ${gl.group_id}`);
+        }
+
+        // order_items.item_id is NOT NULL, so header rows need a concrete item id.
+        // Use a representative member id and keep quantity at 0 so stock/accounting are unaffected.
+        const headerItemId = members[0].item_id;
         const headerRes = await client.query(
           `INSERT INTO order_items (order_id, item_id, item_name, sku, quantity, group_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-          [orderId, null, groupName, null, gl.multiplier, gl.group_id]
+          [orderId, headerItemId, groupName, null, 0, gl.group_id]
         );
         const headerId = headerRes.rows[0].id;
-
-        const members = groupMembers.filter(m => m.group_id === gl.group_id);
         for (const m of members) {
           const qty = m.quantity * gl.multiplier;
           const itemRow = rowsById.get(m.item_id);
@@ -557,9 +578,12 @@ router.patch('/:id', async (req, res) => {
       const newMap = new Map();
       const newIds = [];
       for (const it of items) {
+        if (it.item_id === null || it.item_id === undefined || it.item_id === '') {
+          throw new Error('Virheellinen item_id tai quantity');
+        }
         const iid = parseInt(it.item_id, 10);
         const qty = parseInt(it.quantity, 10) || 0;
-        if (!iid || qty < 0) {
+        if (isNaN(iid) || iid <= 0 || qty < 0) {
           throw new Error('Virheellinen item_id tai quantity');
         }
         newMap.set(iid, qty);
@@ -588,7 +612,7 @@ router.patch('/:id', async (req, res) => {
 
         // apply stock changes and audits
         // Actor: prefer authenticated user id/email, otherwise use provided customer_name so audits are meaningful
-        const actor = reqUser ? (reqUser.id || reqUser.email) : (providedName || null);
+        const actor = reqUser ? (reqUser.id || reqUser.email) : (providedNameRaw || null);
         for (const id of affected) {
           const oldQty = oldMap.get(id) || 0;
           const newQty = newMap.get(id) || 0;

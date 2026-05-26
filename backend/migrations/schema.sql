@@ -112,7 +112,7 @@ ALTER TABLE orders
 CREATE TABLE IF NOT EXISTS order_items (
   id SERIAL PRIMARY KEY,
   order_id INT REFERENCES orders(id) ON DELETE CASCADE,
-  item_id INT REFERENCES items(id),
+  item_id INT NOT NULL REFERENCES items(id),
 
   item_name TEXT NOT NULL, -- snapshot!
   sku TEXT,
