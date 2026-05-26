@@ -24,7 +24,17 @@ const LIGHTING_ITEMS = new Set([
 ]);
 
 function isTvRequirementItem(value) {
-  return normalizeItemName(value).includes('tv');
+  const nn = normalizeItemName(value);
+  if (!nn) return false;
+  const tokens = nn.split(/[^a-z0-9]+/).filter(Boolean);
+  const normalizedCompact = nn.replace(/[^a-z0-9]+/g, '');
+  return (
+    tokens.includes('tv') ||
+    tokens.includes('televisio') ||
+    tokens.includes('iffalcon') ||
+    normalizedCompact === 'infotv' ||
+    normalizedCompact === 'kutullajatv'
+  );
 }
 
 function isNetworkRequirementItem(value) {
