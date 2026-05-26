@@ -27,6 +27,12 @@ function isTvRequirementItem(value) {
   return normalizeItemName(value).includes('tv');
 }
 
+function isNetworkRequirementItem(value) {
+  const nn = normalizeItemName(value);
+  // Keep exact matches for known names and also catch generic/variant Verkko labels.
+  return NETWORK_ITEMS.has(nn) || nn.includes('verkko');
+}
+
 function normalizeItemName(value) {
   if (!value) return '';
   try {
@@ -45,7 +51,7 @@ function requiredRequirementKeysFromItems(itemNames) {
   for (const n of itemNames) {
     const nn = normalizeItemName(n);
     if (POWER_ITEMS.has(nn)) keys.add('power');
-    if (NETWORK_ITEMS.has(nn)) keys.add('network');
+    if (isNetworkRequirementItem(n)) keys.add('network');
     if (LIGHTING_ITEMS.has(nn)) keys.add('lighting');
     if (isTvRequirementItem(n)) keys.add('tv');
   }
@@ -114,7 +120,7 @@ function requireAdmin(req, res, next) {
 // - event_id on pakollinen, jotta tilaus voidaan arkistoida tapahtumaan
 // =======================
 router.post('/', async (req, res) => {
-  const { name, organization, deliveryPoint, returnAt, items, eventId, specialRequirements, openComment } = req.body || {};
+  const { name, organization, deliveryPoint, returnAt, items, eventId, specialRequirements, openComment, autoAddOptOutItemIds } = req.body || {};
 
   if (!name || !organization || !deliveryPoint || !returnAt) {
     return res.status(400).json({ error: 'Pakollisia kenttiä puuttuu' });
@@ -159,6 +165,13 @@ router.post('/', async (req, res) => {
   for (const it of plainItems) {
     plainItemMap.set(it.item_id, (plainItemMap.get(it.item_id) || 0) + it.quantity);
   }
+
+  // Caller may explicitly opt out specific auto-added target items.
+  const autoAddOptOutSet = new Set(
+    (Array.isArray(autoAddOptOutItemIds) ? autoAddOptOutItemIds : [])
+      .map((v) => parseInt(v, 10))
+      .filter((v) => Number.isInteger(v) && v > 0)
+  );
 
   const client = await db.connect();
   try {
@@ -215,6 +228,7 @@ router.post('/', async (req, res) => {
         const targetId = row.auto_add_item_id;
         const mult = parseInt(row.auto_add_item_quantity, 10) || 1;
         if (!sourceQty || !targetId || mult <= 0) continue;
+        if (autoAddOptOutSet.has(targetId)) continue;
         const autoQty = sourceQty * mult;
         plainItemMap.set(targetId, (plainItemMap.get(targetId) || 0) + autoQty);
       }
@@ -557,9 +571,12 @@ router.patch('/:id', async (req, res) => {
       const newMap = new Map();
       const newIds = [];
       for (const it of items) {
+        if (it.item_id === null || it.item_id === undefined || it.item_id === '') {
+          throw new Error('Virheellinen item_id tai quantity');
+        }
         const iid = parseInt(it.item_id, 10);
         const qty = parseInt(it.quantity, 10) || 0;
-        if (!iid || qty < 0) {
+        if (isNaN(iid) || iid <= 0 || qty < 0) {
           throw new Error('Virheellinen item_id tai quantity');
         }
         newMap.set(iid, qty);
@@ -588,7 +605,7 @@ router.patch('/:id', async (req, res) => {
 
         // apply stock changes and audits
         // Actor: prefer authenticated user id/email, otherwise use provided customer_name so audits are meaningful
-        const actor = reqUser ? (reqUser.id || reqUser.email) : (providedName || null);
+        const actor = reqUser ? (reqUser.id || reqUser.email) : (providedNameRaw || null);
         for (const id of affected) {
           const oldQty = oldMap.get(id) || 0;
           const newQty = newMap.get(id) || 0;
