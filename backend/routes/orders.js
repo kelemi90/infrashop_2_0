@@ -764,6 +764,166 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 
 const PDFDocument = require('pdfkit');
 
+// GET /api/orders/all/pdf
+// Generates one PDF document containing all orders with their items.
+router.get('/all/pdf', async (_req, res) => {
+  try {
+    const ordersRes = await db.query(
+      `SELECT id, customer_name, organization, delivery_point, return_at, status, open_comment, special_requirements, created_at, updated_at
+       FROM orders
+       ORDER BY created_at DESC, id DESC`
+    );
+
+    const orders = ordersRes.rows;
+    const orderIds = orders.map((o) => o.id);
+
+    let itemsByOrderId = new Map();
+    if (orderIds.length) {
+      const itemsRes = await db.query(
+        `SELECT order_id, quantity, item_name, sku
+         FROM order_items
+         WHERE order_id = ANY($1::int[])
+         ORDER BY order_id DESC, id ASC`,
+        [orderIds]
+      );
+      itemsByOrderId = itemsRes.rows.reduce((acc, row) => {
+        if (!acc.has(row.order_id)) acc.set(row.order_id, []);
+        acc.get(row.order_id).push(row);
+        return acc;
+      }, new Map());
+    }
+
+    const doc = new PDFDocument({ margin: 50 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=all_orders.pdf');
+    doc.pipe(res);
+
+    doc.fontSize(20).text('Kaikki tilaukset', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(10).text(`Luotu: ${new Date().toLocaleString('fi-FI')}`);
+    doc.moveDown();
+
+    if (!orders.length) {
+      doc.fontSize(12).text('Tilauksia ei löytynyt.');
+      doc.end();
+      return;
+    }
+
+    const REQUIREMENT_LABELS = {
+      power: 'Mitä laitteita tulet laittamaan tähän?',
+      network: 'Kuinka monta konetta ja tarvitsetko wifiä?',
+      lighting: 'Kuinka paljon valoa tarvitset ja minkä väristä?',
+      tv: 'Mihin TV tulee? (Esim. Livelava, Artemis) Muista tilata jalat tai kiinnityksen ja tarvittavat kaapelit.'
+    };
+
+    function addRequirementBlock(requirements) {
+      if (!requirements || typeof requirements !== 'object') return;
+      const entries = Object.entries(REQUIREMENT_LABELS)
+        .filter(([key]) => requirements[key] && String(requirements[key]).trim());
+      if (!entries.length) return;
+
+      doc.moveDown(0.4);
+      doc.fontSize(12).font('Helvetica-Bold').text('Lisätiedot');
+      doc.moveDown(0.2);
+      entries.forEach(([key, label]) => {
+        doc.fontSize(9).font('Helvetica-Bold').text(label);
+        doc.fontSize(9).font('Helvetica').text(String(requirements[key]).trim());
+        doc.moveDown(0.25);
+      });
+    }
+
+    function ensureSpace(minHeight) {
+      if (doc.y + minHeight > doc.page.height - 50) {
+        doc.addPage();
+      }
+    }
+
+    orders.forEach((order, idx) => {
+      if (idx > 0) {
+        doc.addPage();
+      }
+
+      const createdAt = order.created_at ? new Date(order.created_at).toLocaleString('fi-FI') : '-';
+      const updatedAt = order.updated_at ? new Date(order.updated_at).toLocaleString('fi-FI') : '-';
+      const returnDate = order.return_at ? new Date(order.return_at).toISOString().slice(0, 10) : '-';
+
+      doc.fontSize(16).font('Helvetica-Bold').text(`Tilaus #${order.id}`);
+      doc.moveDown(0.5);
+
+      doc.fontSize(10).font('Helvetica');
+      doc.text(`Tilaaja: ${order.customer_name || '-'}`);
+      doc.text(`Organisaatio: ${order.organization || '-'}`);
+      doc.text(`Toimituspiste: ${order.delivery_point || '-'}`);
+      doc.text(`Palautuspäivä: ${returnDate}`);
+      doc.text(`Status: ${order.status || '-'}`);
+      doc.text(`Luotu: ${createdAt}`);
+      doc.text(`Muokattu: ${updatedAt}`);
+      if (order.open_comment && String(order.open_comment).trim()) {
+        doc.text(`Avoin kommentti: ${String(order.open_comment).trim()}`);
+      }
+
+      addRequirementBlock(order.special_requirements);
+
+      doc.moveDown(0.6);
+      doc.fontSize(12).font('Helvetica-Bold').text('Tuotteet');
+      doc.moveDown(0.3);
+
+      const items = itemsByOrderId.get(order.id) || [];
+      if (!items.length) {
+        doc.fontSize(10).font('Helvetica').text('Ei tuotteita.');
+        return;
+      }
+
+      const tableLeft = 50;
+      const pageWidth = doc.page.width - tableLeft - 50;
+      const colWidths = [pageWidth * 0.8, pageWidth * 0.2];
+      const rowHeight = 20;
+
+      const drawRow = (y, cells, isHeader) => {
+        let x = tableLeft;
+        cells.forEach((text, i) => {
+          if (isHeader) {
+            doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1f2933', '#1f2933');
+            doc.fillColor('#ffffff').fontSize(10).font('Helvetica-Bold')
+              .text(String(text), x + 4, y + 5, { width: colWidths[i] - 8, lineBreak: false });
+            doc.fillColor('#000000').font('Helvetica');
+          } else {
+            doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#ffffff', '#888888');
+            doc.fillColor('#000000').fontSize(10).font('Helvetica')
+              .text(String(text), x + 4, y + 5, { width: colWidths[i] - 8, lineBreak: false });
+          }
+          x += colWidths[i];
+        });
+      };
+
+      ensureSpace(rowHeight + 10);
+      let y = doc.y;
+      drawRow(y, ['Tuote', 'Määrä'], true);
+      y += rowHeight;
+
+      items.forEach((it) => {
+        if (y + rowHeight > doc.page.height - 50) {
+          doc.addPage();
+          y = 50;
+          drawRow(y, ['Tuote', 'Määrä'], true);
+          y += rowHeight;
+        }
+        const nameCell = `${it.item_name || 'Tuntematon'} (${it.sku || '-'})`;
+        const qtyCell = `x ${it.quantity}`;
+        drawRow(y, [nameCell, qtyCell], false);
+        y += rowHeight;
+      });
+
+      doc.y = y + 8;
+    });
+
+    doc.end();
+  } catch (err) {
+    console.error('ALL ORDERS PDF ERROR:', err);
+    res.status(500).json({ error: 'PDF:n luonti epäonnistui' });
+  }
+});
+
 // GET /api/orders/:id/pdf
   router.get('/:id/pdf', async (req, res) => {
     const orderId = req.params.id;

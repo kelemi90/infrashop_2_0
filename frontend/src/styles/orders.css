@@ -11,6 +11,38 @@
   color: #ffffff;
 }
 
+.orders-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.orders-header h2 {
+  margin: 0;
+}
+
+.orders-download-all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #3b82f6;
+  background: #3b82f6;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.orders-download-all:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  text-decoration: none;
+}
+
 .orders-table {
   width: 100%;
   border-collapse: collapse;
@@ -172,6 +204,15 @@
 }
 
 @media (max-width: 720px) {
+  .orders-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .orders-download-all {
+    width: 100%;
+  }
+
   .order-view-topbar {
     flex-direction: column;
     align-items: flex-start;
