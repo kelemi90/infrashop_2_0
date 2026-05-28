@@ -115,6 +115,57 @@ router.get('/:id/grouped-orders', async (req, res) => {
   res.json(r.rows);
 });
 
+// order-level summary for event
+router.get('/:id/orders-summary', async (req, res) => {
+  const { id } = req.params;
+
+  const ordersRes = await db.query(
+    `SELECT id, customer_name, organization, delivery_point, status, return_at, created_at, updated_at
+     FROM orders
+     WHERE event_id = $1 AND status IN ('placed','fulfilled','returned','archived')
+     ORDER BY created_at DESC, id DESC`,
+    [id]
+  );
+
+  if (!ordersRes.rows.length) {
+    return res.json([]);
+  }
+
+  const orderIds = ordersRes.rows.map((o) => o.id);
+  const itemsRes = await db.query(
+    `SELECT
+      oi.order_id,
+      oi.item_id,
+      COALESCE(i.name, oi.item_name) AS name,
+      COALESCE(i.sku, oi.sku) AS sku,
+      oi.quantity
+     FROM order_items oi
+     LEFT JOIN items i ON i.id = oi.item_id
+     WHERE oi.order_id = ANY($1::int[])
+       AND oi.quantity > 0
+     ORDER BY oi.order_id DESC, oi.id ASC`,
+    [orderIds]
+  );
+
+  const itemsByOrderId = new Map();
+  for (const row of itemsRes.rows) {
+    if (!itemsByOrderId.has(row.order_id)) itemsByOrderId.set(row.order_id, []);
+    itemsByOrderId.get(row.order_id).push(row);
+  }
+
+  const payload = ordersRes.rows.map((order) => {
+    const items = itemsByOrderId.get(order.id) || [];
+    const totalOrdered = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    return {
+      ...order,
+      total_ordered: totalOrdered,
+      items
+    };
+  });
+
+  return res.json(payload);
+});
+
 // return all items to stock for event (admin)
 router.post('/:id/return-to-stock', async (req, res) => {
   const { id } = req.params;
