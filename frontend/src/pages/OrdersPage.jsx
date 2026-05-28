@@ -13,6 +13,7 @@ export default function OrdersPage(){
     const userJson = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
     let user = null;
     try { user = userJson ? JSON.parse(userJson) : null; } catch (e) { user = null; }
+    const isLoggedIn = Boolean(user);
     const isAdmin = Boolean(user && user.role === 'admin');
 
     const loadOrders = () => {
@@ -104,9 +105,11 @@ export default function OrdersPage(){
         <div className="orders-page">
             <div className="orders-header">
                 <h2>Tilaukset</h2>
-                <a className="orders-download-all" href="/api/orders/all/pdf" target="_blank" rel="noopener noreferrer">
-                    Lataa kaikki tilaukset (PDF)
-                </a>
+                {isLoggedIn && (
+                    <a className="orders-download-all" href="/api/orders/all/pdf" target="_blank" rel="noopener noreferrer">
+                        Lataa kaikki tilaukset (PDF)
+                    </a>
+                )}
             </div>
 
             {error && <p className="error">{error}</p>}

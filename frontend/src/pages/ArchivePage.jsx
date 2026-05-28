@@ -26,6 +26,8 @@ export default function ArchivePage() {
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [groupedItems, setGroupedItems] = useState([]);
+  const [eventOrders, setEventOrders] = useState([]);
+  const [expandedOrderIds, setExpandedOrderIds] = useState({});
   const [loading, setLoading] = useState(false);
 
   // fetch events
@@ -38,11 +40,28 @@ export default function ArchivePage() {
   // fetch grouped orders for selected event
   useEffect(() => {
     if (!selectedEvent) return;
+
     setLoading(true);
-    api.get(`/events/${selectedEvent.id}/grouped-orders`)
-      .then(res => { setGroupedItems(res.data); setLoading(false); })
+    setExpandedOrderIds({});
+
+    Promise.all([
+      api.get(`/events/${selectedEvent.id}/grouped-orders`),
+      api.get(`/events/${selectedEvent.id}/orders-summary`)
+    ])
+      .then(([groupedRes, ordersRes]) => {
+        setGroupedItems(groupedRes.data || []);
+        setEventOrders(ordersRes.data || []);
+        setLoading(false);
+      })
       .catch(err => { console.error(err); setLoading(false); });
   }, [selectedEvent]);
+
+  const toggleOrderExpanded = (orderId) => {
+    setExpandedOrderIds((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId]
+    }));
+  };
 
   return (
     <div className="archive-page">
@@ -77,8 +96,59 @@ export default function ArchivePage() {
             <>
               <h3>{selectedEvent.name}</h3>
 
-              {groupedItems.length === 0 ? (
+              <h4>Tilauslista</h4>
+
+              {eventOrders.length === 0 ? (
                 <div>Ei aktiivisia tilauksia</div>
+              ) : (
+                <ul className="archive-order-list">
+                  {eventOrders.map((order) => {
+                    const isExpanded = !!expandedOrderIds[order.id];
+
+                    return (
+                      <li key={order.id} className="archive-order-item">
+                        <button
+                          className="archive-order-toggle-btn"
+                          onClick={() => toggleOrderExpanded(order.id)}
+                        >
+                          <span>
+                            <strong>Tilaus #{order.id}</strong> - {order.customer_name || 'Nimeton'} - {order.total_ordered} kpl
+                          </span>
+                          <span className="archive-order-toggle-label">{isExpanded ? 'Piilota' : 'Nayta'}</span>
+                        </button>
+
+                        {isExpanded && (
+                          <div className="archive-order-details">
+                            <table width="100%" border="1" cellPadding="6" className="archive-table archive-order-items-table">
+                              <thead>
+                                <tr>
+                                  <th align="left">Tuote</th>
+                                  <th align="left">SKU</th>
+                                  <th align="right">Määrä</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {order.items.map((item, idx) => (
+                                  <tr key={`${order.id}-${item.item_id || idx}`}>
+                                    <td>{item.name}</td>
+                                    <td>{item.sku}</td>
+                                    <td align="right">{item.quantity}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              <h4>Yhteenveto</h4>
+
+              {groupedItems.length === 0 ? (
+                <div>Ei koontidataa</div>
               ) : (
                 <table width="100%" border="1" cellPadding="6" className="archive-table">
                   <thead>

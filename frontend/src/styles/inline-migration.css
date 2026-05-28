@@ -447,6 +447,47 @@
   border-collapse: collapse;
 }
 
+.archive-order-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.archive-order-item {
+  margin-bottom: 10px;
+  border: 1px solid #666;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.archive-order-toggle-btn {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 10px 12px;
+  background: #1f1f1f;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.archive-order-toggle-label {
+  color: #9ad1ff;
+  white-space: nowrap;
+}
+
+.archive-order-details {
+  padding: 10px;
+  background: #2b2b2b;
+}
+
+.archive-order-items-table {
+  margin-top: 4px;
+}
+
 .cart-group-item {
   display: block;
 }
