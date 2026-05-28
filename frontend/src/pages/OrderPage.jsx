@@ -22,7 +22,17 @@ const LIGHTING_ITEMS = new Set([
 ]);
 
 function isTvRequirementItem(value) {
-  return normalizeItemName(value).includes('tv');
+  const nn = normalizeItemName(value);
+  if (!nn) return false;
+  const tokens = nn.split(/[^a-z0-9]+/).filter(Boolean);
+  const normalizedCompact = nn.replace(/[^a-z0-9]+/g, '');
+  return (
+    tokens.includes('tv') ||
+    tokens.includes('televisio') ||
+    tokens.includes('iffalcon') ||
+    normalizedCompact === 'infotv' ||
+    normalizedCompact === 'kutullajatv'
+  );
 }
 
 const REQUIREMENT_TITLES = {
@@ -232,11 +242,25 @@ export default function OrderPage() {
           return;
         }
 
-        const nextQty = existing.autoAddedBySystem
-          ? requiredQty
-          : Math.max(existing.quantity || 0, requiredQty);
-        if (nextQty !== existing.quantity || existing.autoAddedBySystem !== true) {
-          next[targetId] = { ...existing, quantity: nextQty, autoAddedBySystem: true };
+        const currentQty = existing.quantity || 0;
+        let nextQty = currentQty;
+        let nextAutoAddedBySystem = existing.autoAddedBySystem === true;
+
+        if (existing.autoAddedBySystem) {
+          if (currentQty > requiredQty) {
+            // User has manually increased this row above auto-required minimum.
+            nextAutoAddedBySystem = false;
+          } else {
+            nextQty = requiredQty;
+            nextAutoAddedBySystem = true;
+          }
+        } else {
+          nextQty = Math.max(currentQty, requiredQty);
+          nextAutoAddedBySystem = false;
+        }
+
+        if (nextQty !== existing.quantity || nextAutoAddedBySystem !== existing.autoAddedBySystem) {
+          next[targetId] = { ...existing, quantity: nextQty, autoAddedBySystem: nextAutoAddedBySystem };
           changed = true;
         }
       });

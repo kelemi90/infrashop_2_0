@@ -102,7 +102,12 @@ export default function OrdersPage(){
 
     return (
         <div className="orders-page">
-            <h2>Tilaukset</h2>
+            <div className="orders-header">
+                <h2>Tilaukset</h2>
+                <a className="orders-download-all" href="/api/orders/all/pdf" target="_blank" rel="noopener noreferrer">
+                    Lataa kaikki tilaukset (PDF)
+                </a>
+            </div>
 
             {error && <p className="error">{error}</p>}
 
