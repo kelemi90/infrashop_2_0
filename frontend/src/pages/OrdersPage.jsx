@@ -9,6 +9,13 @@ export default function OrdersPage(){
     const [editingOrder, setEditingOrder] = useState(null);
     const [viewingOrder, setViewingOrder] = useState(null);
     const [viewLoading, setViewLoading] = useState(false);
+    const [sortBy, setSortBy] = useState('placed-desc');
+    const [filters, setFilters] = useState({
+        search: '',
+        orderer: '',
+        deliveryPoint: '',
+        status: ''
+    });
 
     const userJson = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
     let user = null;
@@ -59,6 +66,70 @@ export default function OrdersPage(){
             return null;
         }
     };
+
+    const updateFilter = (field, value) => {
+        setFilters((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const compareText = (left, right) => String(left || '').localeCompare(
+        String(right || ''),
+        'fi',
+        { sensitivity: 'base' }
+    );
+
+    const filteredOrders = orders.filter((order) => {
+        const matchesSearch = !filters.search || [
+            order.id,
+            order.customer_name,
+            order.organization,
+            order.delivery_point,
+            order.status
+        ].some((value) => String(value || '').toLowerCase().includes(filters.search.toLowerCase()));
+
+        const matchesOrderer = !filters.orderer || String(order.customer_name || '')
+            .toLowerCase()
+            .includes(filters.orderer.toLowerCase());
+
+        const matchesDeliveryPoint = !filters.deliveryPoint || String(order.delivery_point || '')
+            .toLowerCase()
+            .includes(filters.deliveryPoint.toLowerCase());
+
+        const matchesStatus = !filters.status || String(order.status || '') === filters.status;
+
+        return matchesSearch && matchesOrderer && matchesDeliveryPoint && matchesStatus;
+    }).sort((left, right) => {
+        switch (sortBy) {
+            case 'alpha-asc':
+                return compareText(left.customer_name, right.customer_name);
+            case 'alpha-desc':
+                return compareText(right.customer_name, left.customer_name);
+            case 'delivery-point-asc':
+                return compareText(left.delivery_point, right.delivery_point) || compareText(left.customer_name, right.customer_name);
+            case 'edited-desc': {
+                const leftEdited = parseTimestamp(left.updated_at)?.getTime() || 0;
+                const rightEdited = parseTimestamp(right.updated_at)?.getTime() || 0;
+                return rightEdited - leftEdited || compareText(left.customer_name, right.customer_name);
+            }
+            case 'edited-asc': {
+                const leftEdited = parseTimestamp(left.updated_at)?.getTime() || 0;
+                const rightEdited = parseTimestamp(right.updated_at)?.getTime() || 0;
+                return leftEdited - rightEdited || compareText(left.customer_name, right.customer_name);
+            }
+            case 'placed-asc': {
+                const leftPlaced = parseTimestamp(left.created_at)?.getTime() || 0;
+                const rightPlaced = parseTimestamp(right.created_at)?.getTime() || 0;
+                return leftPlaced - rightPlaced || compareText(left.customer_name, right.customer_name);
+            }
+            case 'placed-desc':
+            default: {
+                const leftPlaced = parseTimestamp(left.created_at)?.getTime() || 0;
+                const rightPlaced = parseTimestamp(right.created_at)?.getTime() || 0;
+                return rightPlaced - leftPlaced || compareText(left.customer_name, right.customer_name);
+            }
+        }
+    });
+
+    const availableStatuses = Array.from(new Set(orders.map((order) => order.status).filter(Boolean))).sort(compareText);
 
     const openOrder = async (orderRow) => {
         setError('');
@@ -114,6 +185,59 @@ export default function OrdersPage(){
 
             {error && <p className="error">{error}</p>}
 
+            <div className="orders-controls">
+                <label>
+                    Haku
+                    <input
+                        type="text"
+                        value={filters.search}
+                        onChange={(e) => updateFilter('search', e.target.value)}
+                        placeholder="ID, tilaaja, organisaatio..."
+                    />
+                </label>
+                <label>
+                    Tilaaja
+                    <input
+                        type="text"
+                        value={filters.orderer}
+                        onChange={(e) => updateFilter('orderer', e.target.value)}
+                        placeholder="Suodata tilaajan nimellä"
+                    />
+                </label>
+                <label>
+                    Toimituspiste
+                    <input
+                        type="text"
+                        value={filters.deliveryPoint}
+                        onChange={(e) => updateFilter('deliveryPoint', e.target.value)}
+                        placeholder="Suodata toimituspisteellä"
+                    />
+                </label>
+                <label>
+                    Status
+                    <select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
+                        <option value="">Kaikki</option>
+                        {availableStatuses.map((status) => (
+                            <option key={status} value={status}>{status}</option>
+                        ))}
+                    </select>
+                </label>
+                <label>
+                    Järjestys
+                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                        <option value="placed-desc">Uusimmat tehdyt</option>
+                        <option value="placed-asc">Vanhimmat tehdyt</option>
+                        <option value="edited-desc">Viimeksi muokatut</option>
+                        <option value="edited-asc">Pisimpään muokkaamatta</option>
+                        <option value="alpha-asc">Tilaaja A-O</option>
+                        <option value="alpha-desc">Tilaaja O-A</option>
+                        <option value="delivery-point-asc">Toimituspiste A-O</option>
+                    </select>
+                </label>
+            </div>
+
+            <p className="orders-results-count">Näytetään {filteredOrders.length} / {orders.length} tilausta</p>
+
             <table className="orders-table">
                 <thead>
                     <tr>
@@ -129,7 +253,7 @@ export default function OrdersPage(){
                 </thead>
 
                 <tbody>
-                    {orders.map(o => {
+                    {filteredOrders.map(o => {
                         const timeMeta = getOrderTimestampMeta(o);
                         return (
                         <tr key={o.id}>
@@ -152,6 +276,11 @@ export default function OrdersPage(){
                             </td>
                         </tr>
                     )})}
+                    {filteredOrders.length === 0 && (
+                        <tr>
+                            <td colSpan="8">Ei hakuehdoilla löytyviä tilauksia.</td>
+                        </tr>
+                    )}
                 </tbody>
             </table>
 

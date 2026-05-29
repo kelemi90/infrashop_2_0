@@ -32,6 +32,7 @@ export default function EditOrderModal({ orderId, customerName, onClose, onSaved
         setItems(res.data.items.map(i => ({
           item_id: i.item_id,
           quantity: i.quantity,
+          original_quantity: i.quantity,
           name: i.item_name || i.name,
           thumbnail_url: i.thumbnail_url || i.image_url,
           short_description: i.short_description,
@@ -48,19 +49,21 @@ export default function EditOrderModal({ orderId, customerName, onClose, onSaved
 
   const requirements = parseRequirements(order?.special_requirements);
 
+  const getMaxAllowed = (line) => {
+    const ai = availableItems.find(a => a.id === line.item_id);
+    const available = ai ? ai.available_stock : 0;
+    const originalQty = Number(line.original_quantity) || 0;
+    return originalQty + (available || 0);
+  };
+
   const updateQty = (index, q) => {
     const copy = [...items];
     const parsed = Math.max(0, Number(q) || 0);
     const line = copy[index];
-    // determine available stock for this item
-    const ai = availableItems.find(a => a.id === line.item_id);
-    const available = ai ? ai.available_stock : 0;
-    const oldQty = line.quantity || 0; // current shown quantity is the old reservation
-    // When editing an existing line, the maximum allowed is oldQty + available
-    // For newly added lines oldQty is 0.
-    const maxAllowed = oldQty + (available || 0);
+    const maxAllowed = getMaxAllowed(line);
     if (parsed > maxAllowed) {
-      setError(`Varastossa vain ${available} vapaata kpl (max ${maxAllowed})`);
+      const freeStock = Math.max(0, maxAllowed - (Number(line.original_quantity) || 0));
+      setError(`Varastossa vain ${freeStock} vapaata kpl (max ${maxAllowed})`);
       copy[index].quantity = maxAllowed;
     } else {
       copy[index].quantity = parsed;
@@ -84,9 +87,20 @@ export default function EditOrderModal({ orderId, customerName, onClose, onSaved
       return;
     }
     const sel = availableItems.find(a => a.id === iid);
-    setItems(prev => [...prev, { item_id: iid, quantity: 1, name: sel ? sel.name : `#${iid}` }]);
+    setItems(prev => [...prev, {
+      item_id: iid,
+      quantity: 1,
+      original_quantity: 0,
+      name: sel ? sel.name : `#${iid}`
+    }]);
     setSelectedAdd('');
     setError('');
+  };
+
+  const changeQtyBy = (index, delta) => {
+    const line = items[index];
+    if (!line) return;
+    updateQty(index, (Number(line.quantity) || 0) + delta);
   };
 
   const submit = async () => {
@@ -179,13 +193,34 @@ export default function EditOrderModal({ orderId, customerName, onClose, onSaved
                 </div>
                 <div className="eom-item-qty">
                   <label className="eom-qty-label">Määrä</label>
-                  <input
-                    className="eom-qty-input"
-                    type="number"
-                    min="0"
-                    value={it.quantity}
-                    onChange={e => updateQty(idx, e.target.value)}
-                  />
+                  <div className="eom-qty-controls">
+                    <button
+                      type="button"
+                      className="eom-qty-btn"
+                      onClick={() => changeQtyBy(idx, -1)}
+                      disabled={(Number(it.quantity) || 0) <= 0}
+                      aria-label={`Vähennä tuotteen ${it.name || it.item_id} määrää`}
+                    >
+                      -
+                    </button>
+                    <input
+                      className="eom-qty-input"
+                      type="number"
+                      min="0"
+                      max={getMaxAllowed(it)}
+                      value={it.quantity}
+                      onChange={e => updateQty(idx, e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="eom-qty-btn"
+                      onClick={() => changeQtyBy(idx, 1)}
+                      disabled={(Number(it.quantity) || 0) >= getMaxAllowed(it)}
+                      aria-label={`Lisää tuotteen ${it.name || it.item_id} määrää`}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <button className="eom-btn eom-btn-danger" onClick={() => removeLine(idx)}>Poista</button>
               </div>

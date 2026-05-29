@@ -38,6 +38,9 @@ export default function ItemImageEdit(){
     if (!q) return true;
     return (i.name || '').toLowerCase().includes(q) || (i.sku || '').toLowerCase().includes(q) || (i.category || '').toLowerCase().includes(q);
   });
+  const categoryOptions = Array.from(new Set(items.map((item) => item.category).filter(Boolean))).sort((left, right) =>
+    String(left).localeCompare(String(right), 'fi', { sensitivity: 'base' })
+  );
 
   const onChoose = (it) => { setSelected(it); setFiles([]); setMessage(''); };
 
@@ -182,7 +185,12 @@ export default function ItemImageEdit(){
                   <div className="edit-row">
                     <div className="edit-label">Kategoria:</div>
                     <div className="edit-field">
-                      <input value={editValues.category} onChange={e=>setEditValues(v=>({...v, category: e.target.value}))} />
+                      <select value={editValues.category || ''} onChange={e=>setEditValues(v=>({...v, category: e.target.value}))}>
+                        <option value="">Valitse kategoria</option>
+                        {categoryOptions.map((category) => (
+                          <option key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 

@@ -130,9 +130,9 @@ function requireAdmin(req, res, next) {
 // - event_id on pakollinen, jotta tilaus voidaan arkistoida tapahtumaan
 // =======================
 router.post('/', async (req, res) => {
-  const { name, organization, deliveryPoint, returnAt, items, eventId, specialRequirements, openComment, autoAddOptOutItemIds } = req.body || {};
+  const { name, organization, deliveryPoint, deliveryAt, items, eventId, specialRequirements, openComment, autoAddOptOutItemIds } = req.body || {};
 
-  if (!name || !organization || !deliveryPoint || !returnAt) {
+  if (!name || !organization || !deliveryPoint || !deliveryAt) {
     return res.status(400).json({ error: 'Pakollisia kenttiä puuttuu' });
   }
   if (!eventId) {
@@ -145,6 +145,10 @@ router.post('/', async (req, res) => {
   const parsedEventId = parseInt(eventId, 10);
   if (!parsedEventId) {
     return res.status(400).json({ error: 'Virheellinen tapahtuma' });
+  }
+
+  if (Number.isNaN(Date.parse(deliveryAt))) {
+    return res.status(400).json({ error: 'Virheellinen toimituspaiva' });
   }
 
   // Support both plain items and group bundles in the payload.
@@ -187,10 +191,24 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const evRes = await client.query('SELECT id FROM events WHERE id = $1', [parsedEventId]);
+    const evRes = await client.query(
+      `SELECT
+        id,
+        end_date,
+        (end_date::date + interval '1 day' - interval '1 second') AS computed_return_at
+       FROM events
+       WHERE id = $1`,
+      [parsedEventId]
+    );
     if (!evRes.rows.length) {
       throw new Error('Valittua tapahtumaa ei löytynyt');
     }
+
+    if (!evRes.rows[0].end_date) {
+      throw new Error('Valitulta tapahtumalta puuttuu paattymispaiva');
+    }
+
+    const computedReturnAt = evRes.rows[0].computed_return_at;
     // Build required quantities per concrete item by combining plain items and group bundles
     const groupIds = Array.from(new Set(groupLines.map(g => g.group_id)));
 
@@ -309,8 +327,8 @@ router.post('/', async (req, res) => {
         status,
         special_requirements,
         open_comment
-      ) VALUES ($1,$2,$3,$4,now(),$5,'placed',$6,$7) RETURNING id`,
-      [parsedEventId, String(name).trim(), String(organization).trim(), String(deliveryPoint).trim(), returnAt, requirementsValue, openCommentValue]
+      ) VALUES ($1,$2,$3,$4,$5,$6,'placed',$7,$8) RETURNING id`,
+      [parsedEventId, String(name).trim(), String(organization).trim(), String(deliveryPoint).trim(), deliveryAt, computedReturnAt, requirementsValue, openCommentValue]
     );
 
     const orderId = orderRes.rows[0].id;

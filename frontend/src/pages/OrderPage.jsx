@@ -81,6 +81,12 @@ function selectedGroupRequirementItems(cartGroups, groupItemsById) {
   );
 }
 
+function compareByName(left, right) {
+  return String(left || '').localeCompare(String(right || ''), 'fi', {
+    sensitivity: 'base'
+  });
+}
+
 export default function OrderPage() {
   const [stepCompleted, setStepCompleted] = useState(false);
   const [events, setEvents] = useState([]);
@@ -92,6 +98,7 @@ export default function OrderPage() {
     name: '',
     organization: '',
     deliveryPoint: '',
+    deliveryDate: '',
     returnDate: ''
   });
 
@@ -107,6 +114,7 @@ export default function OrderPage() {
     lighting: '',
     tv: ''
   });
+  const [cartSortMode, setCartSortMode] = useState('category');
   const [openComment, setOpenComment] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -184,7 +192,7 @@ export default function OrderPage() {
     orderInfo.name &&
     orderInfo.organization &&
     orderInfo.deliveryPoint &&
-    orderInfo.returnDate;
+    orderInfo.deliveryDate;
 
   const addToCart = (item, qty) => {
     const safeQty = Math.min(Math.max(qty, 0), item.available_stock);
@@ -341,7 +349,7 @@ export default function OrderPage() {
       name: orderInfo.name,
       organization: orderInfo.organization,
       deliveryPoint: orderInfo.deliveryPoint,
-      returnAt: orderInfo.returnDate,
+      deliveryAt: orderInfo.deliveryDate,
       items: [
         ...selectedCartGroups.map(([group_id, multiplier]) => ({ group_id: Number(group_id), multiplier })),
         ...selectedCartItems.map(i => ({ item_id: i.id, quantity: i.quantity }))
@@ -378,6 +386,7 @@ export default function OrderPage() {
         name: '',
         organization: '',
         deliveryPoint: '',
+        deliveryDate: '',
         returnDate: ''
       });
 
@@ -451,6 +460,8 @@ export default function OrderPage() {
               requiredKeys={requiredKeys}
               specialRequirements={specialRequirements}
               setSpecialRequirements={setSpecialRequirements}
+              cartSortMode={cartSortMode}
+              setCartSortMode={setCartSortMode}
               openComment={openComment}
               setOpenComment={setOpenComment}
               onSubmit={submitOrder}
@@ -511,6 +522,10 @@ function OrderContextBar({ orderInfo, events }) {
         <span>{selectedEvent ? selectedEvent.name : '-'}</span>
       </div>
       <div className="order-context-item">
+        <span className="order-context-label">Toimituspaiva</span>
+        <span>{orderInfo.deliveryDate || '-'}</span>
+      </div>
+      <div className="order-context-item">
         <span className="order-context-label">Palautuspäivä</span>
         <span>{orderInfo.returnDate || '-'}</span>
       </div>
@@ -522,17 +537,28 @@ function OrderContextBar({ orderInfo, events }) {
 // Order Form (email poistettu)
 // =========================
 function OrderForm({ events, eventsLoading, orderInfo, setOrderInfo, onContinue, isValid, error }) {
+  const selectedEvent = events.find((ev) => String(ev.id) === String(orderInfo.eventId));
+
+  const formatDateInput = (value) => {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toISOString().slice(0, 10);
+  };
+
   const update = (field, value) =>
     setOrderInfo({ ...orderInfo, [field]: value });
 
   const updateEvent = (value) => {
     const selected = events.find((ev) => String(ev.id) === String(value));
     const autoReturnDate = selected?.end_date ? String(selected.end_date).slice(0, 10) : '';
+    const autoDeliveryDate = selected?.start_date ? String(selected.start_date).slice(0, 10) : '';
 
     setOrderInfo({
       ...orderInfo,
       eventId: value,
-      returnDate: orderInfo.returnDate || autoReturnDate
+      deliveryDate: orderInfo.deliveryDate || autoDeliveryDate,
+      returnDate: autoReturnDate
     });
   };
 
@@ -573,13 +599,22 @@ function OrderForm({ events, eventsLoading, orderInfo, setOrderInfo, onContinue,
       </label>
 
       <label>
+        Toimituspäivä
+        <input
+          type="date"
+          value={orderInfo.deliveryDate}
+          onChange={e => update('deliveryDate', e.target.value)}
+        />
+      </label>
+
+      <label>
         Palautuspäivä
         <input
           type="date"
-          value={orderInfo.returnDate}
-          onChange={e => update('returnDate', e.target.value)}
+          value={formatDateInput(selectedEvent?.end_date || orderInfo.returnDate)}
+          readOnly
         />
-        <small>Tuotteet palautuvat automaattisesti sunnuntaina klo 23:00</small>
+        <small>Palautuspäivä määräytyy automaattisesti valitun tapahtuman viimeisestä päivästä.</small>
       </label>
 
       <button disabled={!isValid} onClick={onContinue}>
@@ -658,12 +693,31 @@ function ProductsSection({ groupedItems, itemGroups, addGroupToCart, cart, addTo
   );
 }
 
-function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, openComment, setOpenComment, onSubmit }) {
+function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, setCartGroups, removeFromCart, requiredKeys, specialRequirements, setSpecialRequirements, cartSortMode, setCartSortMode, openComment, setOpenComment, onSubmit }) {
   const items = Object.values(cart).filter(i => i.quantity > 0);
   const groups = Object.entries(cartGroups || {}).map(([gid, mult]) => {
     const found = (itemGroups || []).find((g) => String(g.id) === String(gid));
     const includedItems = (groupItemsById && groupItemsById[gid]) || [];
     return { group_id: gid, multiplier: mult, name: found ? found.name : `Group ${gid}`, includedItems };
+  });
+  const cartEntries = [...groups.map((group) => ({
+    type: 'group',
+    key: `group-${group.group_id}`,
+    sortName: group.name,
+    sortCategory: 'Tuoteryhmät',
+    ...group
+  })), ...items.map((item) => ({
+    type: 'item',
+    key: `item-${item.id}`,
+    sortName: item.name,
+    sortCategory: item.category || 'Muut tuotteet',
+    ...item
+  }))].sort((left, right) => {
+    if (cartSortMode === 'alphabetical') {
+      return compareByName(left.sortName, right.sortName);
+    }
+
+    return compareByName(left.sortCategory, right.sortCategory) || compareByName(left.sortName, right.sortName);
   });
 
   const updateRequirement = (key, value) => {
@@ -675,35 +729,102 @@ function CartSidebar({ orderInfo, cart, cartGroups, itemGroups, groupItemsById, 
 
   return (
     <aside className="cart">
-      <h3>Ostoskori</h3>
+      <div className="cart-header">
+        <h3>Ostoskori</h3>
+        <label className="cart-sort-label">
+          Järjestys
+          <select value={cartSortMode} onChange={(e) => setCartSortMode(e.target.value)}>
+            <option value="category">Tuotekategoria</option>
+            <option value="alphabetical">Aakkosjärjestys</option>
+          </select>
+        </label>
+      </div>
       {items.length === 0 && groups.length === 0 && <p>Ei tuotteita</p>}
 
-      {groups.map(g => (
-        <div key={`group-${g.group_id}`} className="cart-item group-item cart-group-item">
-          <div className="cart-group-item-head">
-            <span>{g.name}</span>
-            <span>x {g.multiplier}</span>
-            <button onClick={() => {
-              const copy = { ...cartGroups };
-              delete copy[g.group_id];
-              setCartGroups(copy);
-            }}>✕</button>
+      {cartSortMode === 'category' ? (() => {
+        // Build ordered category list preserving sort order
+        const orderedCategories = [];
+        const byCategory = {};
+        for (const entry of cartEntries) {
+          if (!byCategory[entry.sortCategory]) {
+            byCategory[entry.sortCategory] = [];
+            orderedCategories.push(entry.sortCategory);
+          }
+          byCategory[entry.sortCategory].push(entry);
+        }
+        return orderedCategories.map((cat) => (
+          <div key={cat} className="cart-category-group">
+            <div className="cart-category-header">{cat}</div>
+            {byCategory[cat].map((entry) => {
+              if (entry.type === 'group') {
+                return (
+                  <div key={entry.key} className="cart-item group-item cart-group-item">
+                    <div className="cart-item-meta">
+                      <div className="cart-group-item-head">
+                        <span>{entry.name}</span>
+                        <span>x {entry.multiplier}</span>
+                        <button onClick={() => {
+                          const copy = { ...cartGroups };
+                          delete copy[entry.group_id];
+                          setCartGroups(copy);
+                        }}>✕</button>
+                      </div>
+                    </div>
+                    {entry.includedItems.length > 0 && (
+                      <div className="muted cart-group-item-details">
+                        Sisaltaa: {entry.includedItems.map((it) => `${it.name} x${it.quantity}`).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <div key={entry.key} className="cart-item">
+                  <div className="cart-item-meta">
+                    <span>{entry.name}{entry.autoAddedBySystem ? ' (auto)' : ''}</span>
+                  </div>
+                  <span>x {entry.quantity}</span>
+                  <button onClick={() => removeFromCart(entry.id)}>✕</button>
+                </div>
+              );
+            })}
           </div>
-          {g.includedItems.length > 0 && (
-            <div className="muted cart-group-item-details">
-              Sisaltaa: {g.includedItems.map((it) => `${it.name} x${it.quantity}`).join(', ')}
+        ));
+      })() : cartEntries.map((entry) => {
+        if (entry.type === 'group') {
+          return (
+            <div key={entry.key} className="cart-item group-item cart-group-item">
+              <div className="cart-item-meta">
+                <span className="cart-item-category">{entry.sortCategory}</span>
+                <div className="cart-group-item-head">
+                  <span>{entry.name}</span>
+                  <span>x {entry.multiplier}</span>
+                  <button onClick={() => {
+                    const copy = { ...cartGroups };
+                    delete copy[entry.group_id];
+                    setCartGroups(copy);
+                  }}>✕</button>
+                </div>
+              </div>
+              {entry.includedItems.length > 0 && (
+                <div className="muted cart-group-item-details">
+                  Sisaltaa: {entry.includedItems.map((it) => `${it.name} x${it.quantity}`).join(', ')}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ))}
-
-      {items.map(item => (
-        <div key={item.id} className="cart-item">
-          <span>{item.name}{item.autoAddedBySystem ? ' (auto)' : ''}</span>
-          <span>x {item.quantity}</span>
-          <button onClick={() => removeFromCart(item.id)}>✕</button>
-        </div>
-      ))}
+          );
+        }
+        return (
+          <div key={entry.key} className="cart-item">
+            <div className="cart-item-meta">
+              <span className="cart-item-category">{entry.sortCategory}</span>
+              <span>{entry.name}{entry.autoAddedBySystem ? ' (auto)' : ''}</span>
+            </div>
+            <span>x {entry.quantity}</span>
+            <button onClick={() => removeFromCart(entry.id)}>✕</button>
+          </div>
+        );
+      })}
 
       {requiredKeys.length > 0 && (
         <div className="order-extra-info">
