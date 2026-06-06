@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS items (
   long_description TEXT,
   image_url TEXT,
   thumbnail_url TEXT,
+  varasto TEXT,
+  rama_id TEXT,
   total_stock INT DEFAULT 0,
   available_stock INT DEFAULT 0,
   auto_add_item_id INT,
@@ -32,6 +34,12 @@ ALTER TABLE items
 
 ALTER TABLE items
   ADD COLUMN IF NOT EXISTS auto_add_item_quantity INT NOT NULL DEFAULT 1;
+
+ALTER TABLE items
+  ADD COLUMN IF NOT EXISTS varasto TEXT;
+
+ALTER TABLE items
+  ADD COLUMN IF NOT EXISTS rama_id TEXT;
 
 -- ------------------------------
 -- item_images: tuotteen kuvagalleria

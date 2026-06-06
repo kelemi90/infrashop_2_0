@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
 import buildImageUrl from '../utils/imageUrl';
+import { getSessionUser, canManageCatalog } from '../utils/roles';
 import '../styles/edit-order-modal.css';
 
 export default function EditOrderModal({ orderId, customerName, onClose, onSaved }) {
@@ -187,6 +188,8 @@ export default function EditOrderModal({ orderId, customerName, onClose, onSaved
                   <div className="eom-item-name">{it.name || `#${it.item_id}`}</div>
                   {it.sku && <div className="eom-item-meta">SKU: {it.sku}</div>}
                   {it.short_description && <div className="eom-item-meta">{it.short_description}</div>}
+          {/* varasto and rama_id intentionally hidden in the inline order edit view;
+            they are shown in the full item detail modal when user clicks "Näytä" */}
                   {available !== null && (
                     <div className="eom-item-meta">Vapaana varastossa: {available} kpl</div>
                   )}

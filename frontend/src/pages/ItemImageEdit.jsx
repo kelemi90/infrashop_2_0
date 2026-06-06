@@ -30,7 +30,6 @@ export default function ItemImageEdit(){
       }
     }).catch(()=>{});
   },[location.search]);
-
   // search/filter state for left list
   const [filter, setFilter] = useState('');
   const filteredItems = items.filter(i => {
@@ -58,6 +57,8 @@ export default function ItemImageEdit(){
         total_stock: selected.total_stock || 0,
         available_stock: selected.available_stock || 0,
         category: selected.category || '',
+        varasto: selected.varasto || '',
+        rama_id: selected.rama_id || '',
         auto_add_item_id: selected.auto_add_item_id ? String(selected.auto_add_item_id) : '',
         auto_add_item_quantity: selected.auto_add_item_quantity || 1
       });
@@ -252,6 +253,20 @@ export default function ItemImageEdit(){
                     </div>
                     <div className="edit-field small">
                       <input type="number" value={editValues.available_stock} onChange={e=>setEditValues(v=>({...v, available_stock: Number(e.target.value) }))} />
+                    </div>
+                  </div>
+
+                  <div className="edit-row">
+                    <div className="edit-label">Varasto:</div>
+                    <div className="edit-field">
+                      <input value={editValues.varasto || ''} onChange={e=>setEditValues(v=>({...v, varasto: e.target.value}))} />
+                    </div>
+                  </div>
+
+                  <div className="edit-row">
+                    <div className="edit-label">RamaID:</div>
+                    <div className="edit-field">
+                      <input value={editValues.rama_id || ''} onChange={e=>setEditValues(v=>({...v, rama_id: e.target.value}))} />
                     </div>
                   </div>
 

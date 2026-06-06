@@ -16,15 +16,14 @@ function decodeJwtPayload(token) {
 
 export function getSessionUser() {
   if (typeof window === 'undefined') return null;
-
   let user = null;
   try {
-    user = JSON.parse(sessionStorage.getItem('user') || 'null');
+    user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || 'null');
   } catch (e) {
     user = null;
   }
 
-  const token = sessionStorage.getItem('token');
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token');
   const payload = decodeJwtPayload(token);
   const tokenRole = payload && typeof payload.role === 'string' ? payload.role : null;
   const tokenId = payload && payload.id !== undefined ? payload.id : null;

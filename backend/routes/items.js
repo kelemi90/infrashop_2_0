@@ -332,15 +332,16 @@ router.put('/:id', requireCatalogManager, async (req, res) => {
     const finalAutoAddQty = parsedAutoAddItemId ? (parsedAutoAddItemQty || 1) : 1;
 
     await db.query(
-      `UPDATE items
-       SET sku=$1, name=$2, short_description=$3, long_description=$4,
-           total_stock=$5, available_stock=$6, category=$7,
-           auto_add_item_id=$8, auto_add_item_quantity=$9,
-           varasto=$10, rama_id=$11,
-           updated_at=now()
-       WHERE id=$10`,
+    `UPDATE items
+     SET sku=$1, name=$2, short_description=$3, long_description=$4,
+       total_stock=$5, available_stock=$6, category=$7,
+       auto_add_item_id=$8, auto_add_item_quantity=$9,
+       varasto=$10, rama_id=$11,
+       updated_at=now()
+     WHERE id=$12`,
       [newSku, newName, newShort, newLong, newTotal, newAvail, newCat, parsedAutoAddItemId, finalAutoAddQty, req.body.varasto || existing.varasto, req.body.rama_id || existing.rama_id, id]
     );
+
 
     const item = (await db.query(
       `SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url,

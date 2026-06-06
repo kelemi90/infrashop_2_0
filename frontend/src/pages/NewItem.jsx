@@ -10,6 +10,8 @@ export default function NewItem(){
   const [availableStock, setAvailableStock] = useState(0);
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState([]);
+  const [varasto, setVarasto] = useState('');
+  const [ramaId, setRamaId] = useState('');
   const [allItems, setAllItems] = useState([]);
   const [autoAddItemId, setAutoAddItemId] = useState('');
   const [autoAddItemQuantity, setAutoAddItemQuantity] = useState(1);
@@ -40,6 +42,8 @@ export default function NewItem(){
         total_stock: Number(totalStock) || 0,
         available_stock: Number(availableStock) || 0,
         category: category || null,
+          varasto: varasto || null,
+          rama_id: ramaId || null,
         auto_add_item_id: autoAddItemId ? Number(autoAddItemId) : null,
         auto_add_item_quantity: autoAddItemId ? Math.max(1, Number(autoAddItemQuantity) || 1) : 1
       };
@@ -117,6 +121,16 @@ export default function NewItem(){
               onChange={e => setAutoAddItemQuantity(e.target.value)}
               disabled={!autoAddItemId}
             />
+          </label>
+        </div>
+        <div className="new-item-field">
+          <label>Varasto (esim. varaston nimi)<br/>
+            <input value={varasto} onChange={e=>setVarasto(e.target.value)} />
+          </label>
+        </div>
+        <div className="new-item-field">
+          <label>RamaID<br/>
+            <input value={ramaId} onChange={e=>setRamaId(e.target.value)} />
           </label>
         </div>
         <div>

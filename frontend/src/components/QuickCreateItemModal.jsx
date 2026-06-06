@@ -9,6 +9,8 @@ export default function QuickCreateItemModal({ onClose, onCreated }){
   const [availableStock, setAvailableStock] = useState(0);
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState([]);
+  const [varasto, setVarasto] = useState('');
+  const [ramaId, setRamaId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState(null);
@@ -34,7 +36,9 @@ export default function QuickCreateItemModal({ onClose, onCreated }){
         short_description: shortDescription || null,
         total_stock: Number(totalStock) || 0,
         available_stock: Number(availableStock) || 0,
-        category: category || null
+        category: category || null,
+        varasto: varasto || null,
+        rama_id: ramaId || null
       };
       const res = await api.post('/items', payload);
       setCreated(res.data);
@@ -72,6 +76,8 @@ export default function QuickCreateItemModal({ onClose, onCreated }){
                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <input placeholder="Short description" value={shortDescription} onChange={e=>setShortDescription(e.target.value)} />
+                <input placeholder="Varasto (optional)" value={varasto} onChange={e=>setVarasto(e.target.value)} />
+                <input placeholder="RamaID (optional)" value={ramaId} onChange={e=>setRamaId(e.target.value)} />
                 <div className="quick-create-modal-stock-row">
                   <input type="number" placeholder="Total" value={totalStock} onChange={e=>setTotalStock(e.target.value)} />
                   <input type="number" placeholder="Available" value={availableStock} onChange={e=>setAvailableStock(e.target.value)} />
