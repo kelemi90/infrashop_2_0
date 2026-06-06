@@ -122,6 +122,8 @@ const upload = multer({
   try {
     await db.query('ALTER TABLE items ADD COLUMN IF NOT EXISTS auto_add_item_id INT');
     await db.query('ALTER TABLE items ADD COLUMN IF NOT EXISTS auto_add_item_quantity INT NOT NULL DEFAULT 1');
+    await db.query('ALTER TABLE items ADD COLUMN IF NOT EXISTS varasto TEXT');
+    await db.query('ALTER TABLE items ADD COLUMN IF NOT EXISTS rama_id TEXT');
   } catch (err) {
     console.error('Failed to ensure items auto-add columns:', err);
   }
@@ -139,7 +141,8 @@ router.get('/', async (req, res) => {
   try {
     const result = await db.query(
       `SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url,
-              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity
+              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity,
+              varasto, rama_id
        FROM items
        ORDER BY name`
     );
@@ -158,7 +161,8 @@ router.get('/:id', async (req, res) => {
 
     const result = await db.query(
       `SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url,
-              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity
+              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity,
+              varasto, rama_id
        FROM items WHERE id = $1`,
       [itemId]
     );
@@ -172,6 +176,50 @@ router.get('/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Database error' });
+  }
+});
+
+/* GET /api/items/:id/locations - where the item has been ordered (current + archived) */
+router.get('/:id/locations', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ error: 'Invalid item id' });
+
+  try {
+    console.log(`Fetching locations for item id=${id}`);
+    const currentRes = await db.query(
+      `SELECT oi.order_id,
+              SUM(oi.quantity)::int AS quantity,
+              o.customer_name, o.organization, o.delivery_point, o.delivery_start, o.return_at, o.created_at AS order_created_at,
+              e.id AS event_id, e.name AS event_name
+       FROM order_items oi
+       JOIN orders o ON o.id = oi.order_id
+       LEFT JOIN events e ON e.id = o.event_id
+       WHERE oi.item_id = $1
+       GROUP BY oi.order_id, o.customer_name, o.organization, o.delivery_point, o.delivery_start, o.return_at, o.created_at, e.id, e.name
+       ORDER BY COALESCE(o.delivery_start, o.created_at) DESC, o.created_at DESC`,
+      [id]
+    );
+
+    const archivedRes = await db.query(
+      `SELECT aoi.archived_order_id AS order_id,
+              SUM(aoi.quantity)::int AS quantity,
+              ao.customer_name, ao.organization, ao.delivery_point, ao.delivery_start, ao.return_at, ao.archived_at, ao.created_at AS order_created_at
+       FROM archived_order_items aoi
+       JOIN archived_orders ao ON ao.id = aoi.archived_order_id
+       WHERE aoi.item_id = $1
+       GROUP BY aoi.archived_order_id, ao.customer_name, ao.organization, ao.delivery_point, ao.delivery_start, ao.return_at, ao.archived_at, ao.created_at
+       ORDER BY COALESCE(ao.delivery_start, ao.archived_at, ao.created_at) DESC, ao.archived_at DESC`,
+      [id]
+    );
+
+    // Defensive: ensure rows are arrays
+    const currentRows = Array.isArray(currentRes.rows) ? currentRes.rows : [];
+    const archivedRows = Array.isArray(archivedRes.rows) ? archivedRes.rows : [];
+
+    res.json({ current: currentRows, archived: archivedRows });
+  } catch (err) {
+    console.error('Failed to fetch item locations for id=', id, err && err.stack ? err.stack : err);
+    res.status(500).json({ error: 'Failed to fetch item locations' });
   }
 });
 
@@ -217,7 +265,8 @@ router.post('/:id/image', requireCatalogManager, upload.fields([{ name: 'image',
 
     const itemRow = (await db.query(
       `SELECT id, sku, name, short_description, image_url, thumbnail_url,
-              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity
+              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity,
+              varasto, rama_id
        FROM items WHERE id=$1`,
       [id]
     )).rows;
@@ -287,14 +336,16 @@ router.put('/:id', requireCatalogManager, async (req, res) => {
        SET sku=$1, name=$2, short_description=$3, long_description=$4,
            total_stock=$5, available_stock=$6, category=$7,
            auto_add_item_id=$8, auto_add_item_quantity=$9,
+           varasto=$10, rama_id=$11,
            updated_at=now()
        WHERE id=$10`,
-      [newSku, newName, newShort, newLong, newTotal, newAvail, newCat, parsedAutoAddItemId, finalAutoAddQty, id]
+      [newSku, newName, newShort, newLong, newTotal, newAvail, newCat, parsedAutoAddItemId, finalAutoAddQty, req.body.varasto || existing.varasto, req.body.rama_id || existing.rama_id, id]
     );
 
     const item = (await db.query(
       `SELECT id, sku, name, short_description, long_description, image_url, thumbnail_url,
-              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity
+              total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity,
+              varasto, rama_id
        FROM items WHERE id=$1`,
       [id]
     )).rows[0];
@@ -308,7 +359,7 @@ router.put('/:id', requireCatalogManager, async (req, res) => {
 // POST /api/items - create a new item (catalog manager only)
 router.post('/', requireCatalogManager, async (req, res) => {
   try {
-    const { sku, name, short_description, long_description, total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity } = req.body;
+    const { sku, name, short_description, long_description, total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity, varasto, rama_id } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });
     // if sku not provided, generate one from the name and ensure uniqueness
     let finalSku = sku && String(sku).trim() ? String(sku).trim() : await generateSkuFromName(name);
@@ -331,11 +382,11 @@ router.post('/', requireCatalogManager, async (req, res) => {
     const r = await db.query(
       `INSERT INTO items (
          sku, name, short_description, long_description, total_stock, available_stock, category,
-         auto_add_item_id, auto_add_item_quantity, created_at, updated_at
+         auto_add_item_id, auto_add_item_quantity, varasto, rama_id, created_at, updated_at
        )
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, now(), now())
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now(), now())
        RETURNING id, sku, name, short_description, long_description, image_url, thumbnail_url,
-                 total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity`,
+                 total_stock, available_stock, category, auto_add_item_id, auto_add_item_quantity, varasto, rama_id`,
       [
         finalSku,
         name,
@@ -345,7 +396,9 @@ router.post('/', requireCatalogManager, async (req, res) => {
         available_stock || 0,
         category || null,
         parsedAutoAddItemId,
-        parsedAutoAddItemQty
+        parsedAutoAddItemQty,
+        varasto || null,
+        rama_id || null
       ]
     );
     res.status(201).json(r.rows[0]);

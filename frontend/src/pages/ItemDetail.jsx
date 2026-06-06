@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import api from '../api';
 import buildImageUrl from '../utils/imageUrl';
 
@@ -54,6 +54,9 @@ export default function ItemDetail() {
             )}
             <p>{item.long_description || item.short_description}</p>
             <div>Available: {item.available_stock}</div>
+                    <div style={{ marginTop: 8 }}>
+                        <Link to={`/items/${item.id}/locations`}>See where this item was ordered</Link>
+                    </div>
         </div>
     );
 }

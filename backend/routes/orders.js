@@ -703,6 +703,57 @@ router.patch('/:id', async (req, res) => {
 // Palauttaa kaikki tilaukset (admin)
 router.get('/', async (req, res) => {
   try {
+    // Support filtering by item id, SKU or name via ?item_id= or ?item=
+    const rawItemParam = req.query && (req.query.item || req.query.item_id) ? String(req.query.item || req.query.item_id).trim() : null;
+    if (rawItemParam) {
+      // Resolve to one or more item ids.
+      let matchingIds = [];
+      try {
+        // Try exact SKU match first (even if numeric)
+        const skuRes = await db.query('SELECT id FROM items WHERE sku = $1', [rawItemParam]);
+        if (skuRes.rows.length) {
+          matchingIds = skuRes.rows.map(r => r.id);
+        } else if (/^\d+$/.test(rawItemParam)) {
+          // If no SKU match but param is numeric, treat as item id
+          matchingIds = [parseInt(rawItemParam, 10)];
+        } else {
+          // Fallback to name partial match (case-insensitive)
+          const like = `%${rawItemParam}%`;
+          const nameRes = await db.query('SELECT id FROM items WHERE name ILIKE $1', [like]);
+          matchingIds = nameRes.rows.map(r => r.id);
+        }
+      } catch (err) {
+        console.error('Failed to resolve item param for orders filter:', rawItemParam, err);
+        return res.status(500).json({ error: 'Failed to resolve item filter' });
+      }
+
+      if (!matchingIds.length) {
+        // No item matched -> return empty list
+        return res.json([]);
+      }
+
+      const ordersRes = await db.query(
+        `SELECT
+           o.id,
+           o.customer_name,
+           o.organization,
+           o.delivery_point,
+           o.delivery_start,
+           o.return_at,
+           o.status,
+           o.created_at,
+           o.updated_at,
+           SUM(oi.quantity)::int AS item_quantity
+         FROM orders o
+         JOIN order_items oi ON oi.order_id = o.id
+         WHERE oi.item_id = ANY($1::int[])
+         GROUP BY o.id, o.customer_name, o.organization, o.delivery_point, o.delivery_start, o.return_at, o.status, o.created_at, o.updated_at
+         ORDER BY o.created_at DESC`,
+        [matchingIds]
+      );
+      return res.json(ordersRes.rows);
+    }
+
     const ordersRes = await db.query(`
       SELECT
         o.id,

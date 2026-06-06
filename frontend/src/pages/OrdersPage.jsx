@@ -14,7 +14,8 @@ export default function OrdersPage(){
         search: '',
         orderer: '',
         deliveryPoint: '',
-        status: ''
+        status: '',
+        itemId: ''
     });
 
     const userJson = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
@@ -24,7 +25,9 @@ export default function OrdersPage(){
     const isAdmin = Boolean(user && user.role === 'admin');
 
     const loadOrders = () => {
-        api.get('/orders')
+        const params = {};
+    if (filters.itemId) params.item = filters.itemId;
+        api.get('/orders', { params })
             .then(res => setOrders(res.data))
             .catch(() => setError('Tilauksien haku epäonnistui'));
     };
@@ -32,6 +35,7 @@ export default function OrdersPage(){
     useEffect(() => {
         loadOrders();
     }, []);
+
 
     const parseTimestamp = (value) => {
         if (!value) return null;
@@ -214,6 +218,15 @@ export default function OrdersPage(){
                     />
                 </label>
                 <label>
+                    Item (sku or name)
+                    <input
+                        type="text"
+                        value={filters.itemId}
+                        onChange={(e) => updateFilter('itemId', e.target.value)}
+                        placeholder="Suodata tuotteen sku:lla tai nimellä"
+                    />
+                </label>
+                <label>
                     Status
                     <select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
                         <option value="">Kaikki</option>
@@ -234,6 +247,9 @@ export default function OrdersPage(){
                         <option value="delivery-point-asc">Toimituspiste A-O</option>
                     </select>
                 </label>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+                    <button onClick={() => { setError(''); loadOrders(); }}>Apply filters</button>
+                </div>
             </div>
 
             <p className="orders-results-count">Näytetään {filteredOrders.length} / {orders.length} tilausta</p>
@@ -246,6 +262,7 @@ export default function OrdersPage(){
                         <th>Organisaatio</th>
                         <th>Toimituspiste</th>
                         <th>Palautus</th>
+                        <th>Item qty</th>
                         <th>Status</th>
                         <th>Aikaleima</th>
                         <th>Toiminnot</th>
@@ -262,6 +279,7 @@ export default function OrdersPage(){
                             <td>{o.organization}</td>
                             <td>{o.delivery_point}</td>
                             <td>{o.return_at?.slice(0,10)}</td>
+                            <td>{o.item_quantity ?? '-'}</td>
                             <td>{o.status}</td>
                             <td>{timeMeta.label}: {timeMeta.value}</td>
                             <td className="orders-actions">
