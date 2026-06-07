@@ -19,11 +19,22 @@ sudo -u infrashop bash -lc "cd /srv/infrashop/frontend && rm -rf dist && npm run
 sudo chown -R infrashop:infrashop /srv/infrashop/frontend/dist || true
 sudo -u infrashop bash -lc "cd /srv/infrashop/frontend && rm -rf dist && npm run build" && sudo rm -rf /var/www/infrashop/* && sudo cp -r /srv/infrashop/frontend/dist/* /var/www/infrashop/ && sudo chown -R www-data:www-data /var/www/infrashop && sudo nginx -t && sudo systemctl reload nginx
 ```
-# Code for updating
+# Code for updating (safer)
 ```bash
-sudo -u infrashop bash -lc "cd /srv/infrashop/frontend && rm -rf dist && npm run build"
+# Ensure the frontend files are owned by the infrashop user before building.
+sudo chown -R infrashop:infrashop /srv/infrashop/frontend || true
 
-sudo rm -rf /var/www/infrashop/* && sudo cp -r /srv/infrashop/frontend/dist/* /var/www/infrashop/ && sudo chown -R www-data:www-data /var/www/infrashop && sudo nginx -t && sudo systemctl reload nginx
+# Install dependencies in a reproducible way and build as the infrashop user.
+sudo -u infrashop bash -lc "cd /srv/infrashop/frontend && npm ci --no-audit --no-fund && npm run build"
+
+# Deploy the built static site into nginx's webroot. Use -a to preserve attributes where useful.
+sudo mkdir -p /var/www/infrashop
+sudo rm -rf /var/www/infrashop/*
+sudo cp -a /srv/infrashop/frontend/dist/. /var/www/infrashop/
+sudo chown -R www-data:www-data /var/www/infrashop
+
+# Validate nginx config before reloading to avoid downtime on bad configs.
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 ## Backend (recommended: systemd service)
