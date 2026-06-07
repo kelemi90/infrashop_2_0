@@ -21,14 +21,15 @@ router.post('/summary', async (req, res) => {
       SELECT
         i.name,
         i.category,
+        COALESCE(NULLIF(BTRIM(o.organization), ''), 'Ei määritetty') AS organization,
         COALESCE(NULLIF(BTRIM(o.delivery_point), ''), 'Ei määritetty') AS delivery_point,
         SUM(oi.quantity)::int AS total_quantity
       FROM order_items oi
       JOIN items i ON i.id = oi.item_id
       JOIN orders o ON o.id = oi.order_id
       WHERE LOWER(i.category) = ANY($1)
-      GROUP BY i.name, i.category, o.delivery_point
-      ORDER BY i.category, i.name, o.delivery_point
+      GROUP BY i.name, i.category, o.organization, o.delivery_point
+      ORDER BY i.category, i.name, organization, delivery_point
       `,
       [categories]
     );

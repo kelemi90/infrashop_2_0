@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getSessionUser, canManageCatalog } from '../utils/roles';
 import '../styles/item-modal.css';
 import buildImageUrl from '../utils/imageUrl';
 
@@ -88,7 +89,17 @@ export default function ItemModal({ item, onClose }) {
                                     </div>
                                 )}
 
-                <div className="stock">Varastossa: {item.available_stock}</div>
+                                {canManageCatalog(getSessionUser()) && item.varasto && (
+                                    <div className="item-meta">Varasto: {item.varasto}</div>
+                                )}
+                                {canManageCatalog(getSessionUser()) && (
+                                    <div className="item-meta">Prioriteetti: {item.priority !== undefined && item.priority !== null ? item.priority : '-'}</div>
+                                )}
+                                {getSessionUser() && item.rama_id && (
+                                    <div className="item-meta">RamaID: {item.rama_id}</div>
+                                )}
+
+                                <div className="stock">Varastossa: {item.available_stock}</div>
             </div>
         </div>
     );

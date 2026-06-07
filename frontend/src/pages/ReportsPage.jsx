@@ -5,13 +5,20 @@ import '../styles/reports.css';
 const PRESETS = {
   Build: ["pöydät", "tuolit", "muut", "kodinkoneet"],
   Deco: ["standipaketit", "valot", "trussit", "standipaketti"],
-  Infra: ["TV", "tv", "sähköt", "verkko", "valot", "muut", "trussit"],
-  Game: ["koneet", "oheislaitteet", "pöydät", "tuolit", "valot", "muut"],
-  Sähkö: ["sähköt", "verkko", "Cables"],
-  Verkko: ["sähköt", "verkko", "Cables"]
+  Infra: ["TV", "tv", "muut", "trussit"],
+  Game: ["koneet", "oheislaitteet", "muut"],
+  Sähkö: ["sähköt", "Cables"],
+  Verkko: ["verkko", "Cables"]
 };
 
 function sortByDeliveryPointThenName(a, b) {
+  const byOrganization = String(a.organization || '').localeCompare(
+    String(b.organization || ''),
+    'fi',
+    { sensitivity: 'base' }
+  );
+  if (byOrganization !== 0) return byOrganization;
+
   const byDeliveryPoint = String(a.delivery_point || '').localeCompare(
     String(b.delivery_point || ''),
     'fi',
@@ -133,6 +140,7 @@ export default function ReportsPage() {
             <thead>
               <tr>
                 <th>Tuote</th>
+                <th>Organisaatio</th>
                 <th>Toimituspiste</th>
                 <th>Yhteensä tilattu</th>
               </tr>
@@ -141,6 +149,7 @@ export default function ReportsPage() {
               {sortedAllItemsByDeliveryPoint.map((i, idx) => (
                 <tr key={`all-items-${i.name}-${i.delivery_point}-${idx}`}>
                   <td>{i.name}</td>
+                  <td>{i.organization}</td>
                   <td>{i.delivery_point}</td>
                   <td>{i.total_quantity}</td>
                 </tr>

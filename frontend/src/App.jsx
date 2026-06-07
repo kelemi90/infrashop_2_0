@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import ItemsPage from './pages/ItemsPage';
 import ItemDetail from './pages/ItemDetail';
+import ItemOrderLocations from './pages/ItemOrderLocations';
 import OrderPage from './pages/OrderPage';
 import Admin from './pages/Admin';
 import AdminGroups from './pages/AdminGroups';
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/change-password" element={<RequireAdmin allowedRoles={[ROLE_ADMIN, ROLE_MODERATOR]}><ChangePasswordPage /></RequireAdmin>} />
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/items/:id" element={<ItemDetail />} />
+  <Route path="/items/:id/locations" element={<ItemOrderLocations />} />
         <Route path="/order" element={<OrderPage />} />
   <Route path="/groups" element={<GroupsPage />} />
         <Route path="/orders" element={<OrdersPage />} />

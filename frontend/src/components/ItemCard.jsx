@@ -1,5 +1,6 @@
 import '../styles/item-card.css';
 import buildImageUrl from '../utils/imageUrl';
+import { getSessionUser, canManageCatalog } from '../utils/roles';
 
 export default function ItemCard({ item, onClick }) {
   const imageSrc = buildImageUrl(item && item.image_url);
@@ -26,6 +27,7 @@ export default function ItemCard({ item, onClick }) {
 
         <div className="item-footer">
           <span className="item-stock">Varastossa: {item.available_stock}</span>
+
 
           <button
             className="item-link"

@@ -30,7 +30,6 @@ export default function ItemImageEdit(){
       }
     }).catch(()=>{});
   },[location.search]);
-
   // search/filter state for left list
   const [filter, setFilter] = useState('');
   const filteredItems = items.filter(i => {
@@ -38,6 +37,9 @@ export default function ItemImageEdit(){
     if (!q) return true;
     return (i.name || '').toLowerCase().includes(q) || (i.sku || '').toLowerCase().includes(q) || (i.category || '').toLowerCase().includes(q);
   });
+  const categoryOptions = Array.from(new Set(items.map((item) => item.category).filter(Boolean))).sort((left, right) =>
+    String(left).localeCompare(String(right), 'fi', { sensitivity: 'base' })
+  );
 
   const onChoose = (it) => { setSelected(it); setFiles([]); setMessage(''); };
 
@@ -55,6 +57,8 @@ export default function ItemImageEdit(){
         total_stock: selected.total_stock || 0,
         available_stock: selected.available_stock || 0,
         category: selected.category || '',
+        varasto: selected.varasto || '',
+        rama_id: selected.rama_id || '',
         auto_add_item_id: selected.auto_add_item_id ? String(selected.auto_add_item_id) : '',
         auto_add_item_quantity: selected.auto_add_item_quantity || 1
       });
@@ -182,7 +186,12 @@ export default function ItemImageEdit(){
                   <div className="edit-row">
                     <div className="edit-label">Kategoria:</div>
                     <div className="edit-field">
-                      <input value={editValues.category} onChange={e=>setEditValues(v=>({...v, category: e.target.value}))} />
+                      <select value={editValues.category || ''} onChange={e=>setEditValues(v=>({...v, category: e.target.value}))}>
+                        <option value="">Valitse kategoria</option>
+                        {categoryOptions.map((category) => (
+                          <option key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
@@ -244,6 +253,20 @@ export default function ItemImageEdit(){
                     </div>
                     <div className="edit-field small">
                       <input type="number" value={editValues.available_stock} onChange={e=>setEditValues(v=>({...v, available_stock: Number(e.target.value) }))} />
+                    </div>
+                  </div>
+
+                  <div className="edit-row">
+                    <div className="edit-label">Varasto:</div>
+                    <div className="edit-field">
+                      <input value={editValues.varasto || ''} onChange={e=>setEditValues(v=>({...v, varasto: e.target.value}))} />
+                    </div>
+                  </div>
+
+                  <div className="edit-row">
+                    <div className="edit-label">RamaID:</div>
+                    <div className="edit-field">
+                      <input value={editValues.rama_id || ''} onChange={e=>setEditValues(v=>({...v, rama_id: e.target.value}))} />
                     </div>
                   </div>
 

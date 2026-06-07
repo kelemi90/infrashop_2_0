@@ -43,6 +43,36 @@
   text-decoration: none;
 }
 
+.orders-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.orders-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #e5e7eb;
+  font-size: 0.9rem;
+}
+
+.orders-controls input,
+.orders-controls select {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #64748b;
+  background: #111827;
+  color: #ffffff;
+}
+
+.orders-results-count {
+  margin: 0 0 12px 0;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+
 .orders-table {
   width: 100%;
   border-collapse: collapse;
@@ -211,6 +241,10 @@
 
   .orders-download-all {
     width: 100%;
+  }
+
+  .orders-controls {
+    grid-template-columns: 1fr;
   }
 
   .order-view-topbar {

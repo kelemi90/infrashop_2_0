@@ -80,3 +80,11 @@
   font-size: 20px;
   cursor: pointer;
 }
+
+/* small inline meta labels shown in item card for admins/moderators */
+.item-meta-inline {
+  display: inline-block;
+  margin-left: 12px;
+  color: #bbb;
+  font-size: 0.85rem;
+}
