@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const jwt = require('jsonwebtoken');
+const { getStatusTransitionStockDelta, normalizeStatus } = require('../utils/orderStatus');
 const JWT_SECRET = process.env.JWT_SECRET || 'replace-me';
 
 const POWER_ITEMS = new Set([
@@ -593,6 +594,27 @@ router.patch('/:id', async (req, res) => {
     if (!isOwnerOrAdmin && !nameMatches) {
       await client.query('ROLLBACK');
       return res.status(403).json({ error: 'Ei oikeuksia; kirjaudu sisään tai toimita tilaajan nimi täsmälleen kuten tilauksessa' });
+    }
+
+    let statusTransitionDelta = new Map();
+    if (status !== undefined && normalizeStatus(status) !== normalizeStatus(order.status)) {
+      const quantitiesByItemId = {};
+      const existingItemsRes = await client.query('SELECT item_id, quantity FROM order_items WHERE order_id=$1', [orderId]);
+      for (const row of existingItemsRes.rows) {
+        quantitiesByItemId[row.item_id] = Number(row.quantity) || 0;
+      }
+      statusTransitionDelta = getStatusTransitionStockDelta(order.status, status, quantitiesByItemId);
+    }
+
+    if (statusTransitionDelta.size) {
+      const actor = reqUser ? (reqUser.id || reqUser.email) : (providedNameRaw || null);
+      for (const [itemId, delta] of statusTransitionDelta.entries()) {
+        await client.query('UPDATE items SET available_stock = available_stock + $1 WHERE id=$2', [delta, itemId]);
+        await client.query(
+          'INSERT INTO stock_audit (item_id, order_id, delta, reason, actor) VALUES ($1,$2,$3,$4,$5)',
+          [itemId, orderId, delta, `Order ${orderId} status change`, actor]
+        );
+      }
     }
 
     // If items are provided, update order items and adjust stock

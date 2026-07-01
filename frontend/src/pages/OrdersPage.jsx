@@ -10,6 +10,7 @@ export default function OrdersPage(){
     const [viewingOrder, setViewingOrder] = useState(null);
     const [viewLoading, setViewLoading] = useState(false);
     const [sortBy, setSortBy] = useState('placed-desc');
+    const orderStatusOptions = ['placed', 'ready', 'in_progress', 'packed', 'closed', 'returned'];
     const [filters, setFilters] = useState({
         search: '',
         orderer: '',
@@ -230,7 +231,10 @@ export default function OrdersPage(){
                     Status
                     <select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
                         <option value="">Kaikki</option>
-                        {availableStatuses.map((status) => (
+                        {orderStatusOptions.map((status) => (
+                            <option key={status} value={status}>{status}</option>
+                        ))}
+                        {availableStatuses.filter((status) => !orderStatusOptions.includes(status)).map((status) => (
                             <option key={status} value={status}>{status}</option>
                         ))}
                     </select>

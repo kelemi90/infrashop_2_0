@@ -95,7 +95,7 @@ export default function ItemModal({ item, onClose }) {
                                 {canManageCatalog(getSessionUser()) && (
                                     <div className="item-meta">Prioriteetti: {item.priority !== undefined && item.priority !== null ? item.priority : '-'}</div>
                                 )}
-                                {getSessionUser() && item.rama_id && (
+                                {canManageCatalog(getSessionUser()) && item.rama_id && (
                                     <div className="item-meta">RamaID: {item.rama_id}</div>
                                 )}
 

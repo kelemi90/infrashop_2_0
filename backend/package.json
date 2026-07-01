@@ -9,6 +9,7 @@
         "create_user": "node scripts/create_admin.js",
         "create_admin": "ADMIN_ROLE=admin node scripts/create_admin.js",
         "create_moderator": "ADMIN_ROLE=moderator node scripts/create_admin.js",
+        "auto-restock:ended": "node scripts/auto_restock_ended_events.js",
         "test:change_password": "node tests/test_auth_change_password.js"
     },
     "dependencies": {
@@ -20,8 +21,9 @@
         "morgan": "^1.10.0",
         "multer": "^2.1.1",
         "pdfkit": "^0.18.0",
-        "pg": "^8.21.0",
-        "sharp": "^0.32.1"
+        "pg": "^8.22.0",
+        "sharp": "^0.32.1",
+        "yargs": "^18.0.0"
     },
     "devDependencies": {
         "nodemon": "^3.1.14"

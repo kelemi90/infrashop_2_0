@@ -119,6 +119,62 @@ echo -e "admin@test.com\npassword123\nAdmin User" | node scripts/create_admin.js
 ADMIN_ROLE=admin DB_USER=postgres node scripts/create_admin.js
 ```
 
+---
+
+### `auto_restock_ended_events.js` - Auto-restock ended events
+
+Runs automatic restock for events whose `end_date` has passed.
+
+**Usage:**
+
+```bash
+# From backend directory
+npm run auto-restock:ended
+```
+
+**What it does:**
+
+1. Loads database connection from `../.env`.
+2. Finds all `events` with `end_date <= now()`.
+3. For each ended event, returns stock for all `placed`/`fulfilled` orders to `items.available_stock`.
+4. Archives those orders and changes their status to `returned`.
+5. Writes a `stock_audit` entry for each restocked item.
+
+**Scheduling:**
+
+Use a systemd timer or cron job to run the command periodically, for example daily.
+
+```ini
+# /etc/systemd/system/infrashop-auto-restock.timer
+[Unit]
+Description=Automatic InfraShop event restock timer
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+```ini
+# /etc/systemd/system/infrashop-auto-restock.service
+[Unit]
+Description=Automatic InfraShop event restock
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env bash -lc 'cd /srv/infrashop/backend && npm run auto-restock:ended'
+User=root
+```
+
+Enable the timer with:
+
+```bash
+sudo systemctl enable infrashop-auto-restock.timer
+sudo systemctl start infrashop-auto-restock.timer
+```
+
 **Troubleshooting:**
 
 ```bash

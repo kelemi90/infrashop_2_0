@@ -167,8 +167,7 @@ router.get('/:id/orders-summary', async (req, res) => {
 });
 
 // return all items to stock for event (admin)
-router.post('/:id/return-to-stock', async (req, res) => {
-  const { id } = req.params;
+async function restockEvent(eventId, actor = 'system') {
   const client = await db.connect();
   try {
     await client.query('BEGIN');
@@ -178,12 +177,12 @@ router.post('/:id/return-to-stock', async (req, res) => {
        FROM order_items oi
        JOIN orders o ON oi.order_id = o.id
        WHERE o.event_id = $1 AND o.status IN ('fulfilled','placed') 
-       GROUP BY oi.item_id`, [id]
+       GROUP BY oi.item_id`, [eventId]
     );
 
     // Archive orders & order_items for this event before returning stock
     const ordersToArchive = await client.query(
-      `SELECT * FROM orders WHERE event_id = $1 AND status IN ('fulfilled','placed')`, [id]
+      `SELECT * FROM orders WHERE event_id = $1 AND status IN ('fulfilled','placed')`, [eventId]
     );
 
     for (const ord of ordersToArchive.rows) {
@@ -206,20 +205,32 @@ router.post('/:id/return-to-stock', async (req, res) => {
 
     for (const row of totals.rows) {
       await client.query('UPDATE items SET available_stock = available_stock + $1, updated_at = now() WHERE id = $2', [row.qty, row.item_id]);
-      await client.query('INSERT INTO stock_audit (item_id, delta, reason, actor) VALUES ($1,$2,$3,$4)', [row.item_id, row.qty, `Return from event ${id}`, req.body.actor || 'system']);
+      await client.query('INSERT INTO stock_audit (item_id, delta, reason, actor) VALUES ($1,$2,$3,$4)', [row.item_id, row.qty, `Return from event ${eventId}`, actor]);
     }
 
-    await client.query("UPDATE orders SET status='returned', updated_at = now() WHERE event_id = $1 AND status IN ('fulfilled','placed')", [id]);
+    await client.query("UPDATE orders SET status='returned', updated_at = now() WHERE event_id = $1 AND status IN ('fulfilled','placed')", [eventId]);
 
     await client.query('COMMIT');
-    res.json({ ok: true, returned: totals.rows.length });
+    return { ok: true, returned: totals.rows.length };
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error(err);
-    res.status(500).json({ error: 'Failed to return to stock' });
+    throw err;
   } finally {
     client.release();
+  }
+}
+
+router.post('/:id/return-to-stock', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const actor = req.body.actor || req.user?.email || 'system';
+  try {
+    const result = await restockEvent(id, actor);
+    res.json({ ok: true, returned: result.returned });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to return to stock' });
   }
 });
 
 module.exports = router;
+module.exports.restockEvent = restockEvent;

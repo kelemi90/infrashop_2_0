@@ -10,6 +10,7 @@ export default function EditOrderModal({ orderId, customerName, onClose, onSaved
   const [error, setError] = useState('');
   const [availableItems, setAvailableItems] = useState([]);
   const [selectedAdd, setSelectedAdd] = useState('');
+  const orderStatusOptions = ['placed', 'ready', 'in_progress', 'packed', 'closed', 'returned'];
 
   const parseRequirements = (value) => {
     if (!value) return null;
@@ -109,7 +110,8 @@ export default function EditOrderModal({ orderId, customerName, onClose, onSaved
     try {
       const payload = {
         items: items.map(i => ({ item_id: i.item_id, quantity: i.quantity })),
-        open_comment: order?.open_comment || ''
+        open_comment: order?.open_comment || '',
+        status: order?.status || 'placed'
       };
       if (order.customer_name) payload.customer_name = order.customer_name;
       const res = await api.patch(`/orders/${orderId}`, payload);
@@ -133,6 +135,21 @@ export default function EditOrderModal({ orderId, customerName, onClose, onSaved
               value={order?.customer_name || ''}
               onChange={e => setOrder({ ...order, customer_name: e.target.value })}
             />
+          </label>
+        </div>
+
+        <div className="eom-field">
+          <label className="eom-label">
+            Tila
+            <select
+              className="eom-input"
+              value={order?.status || 'placed'}
+              onChange={e => setOrder({ ...order, status: e.target.value })}
+            >
+              {orderStatusOptions.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           </label>
         </div>
 
