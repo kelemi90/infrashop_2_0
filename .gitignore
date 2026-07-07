@@ -58,3 +58,6 @@ build/
 
 # Optional: if you prefer not to track product images in git, uncomment:
 # backend/public/images/
+
+# Extra ignore
+slack_webhook.md
