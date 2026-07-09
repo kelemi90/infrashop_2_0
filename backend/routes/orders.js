@@ -229,7 +229,12 @@ router.get('/', requireAdmin, async (req, res, next) => {
     const limit = parseInt(req.query.limit, 10) || 50;
     const offset = parseInt(req.query.offset, 10) || 0;
 
-    const r = await db.query('SELECT * FROM orders ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]);
+    const r = await db.query(`
+      SELECT o.*, e.name AS event_name 
+      FROM orders o 
+      LEFT JOIN events e ON o.event_id = e.id 
+      ORDER BY e.start_date DESC, o.created_at DESC 
+      LIMIT $1 OFFSET $2`, [limit, offset]);
     const total = await db.query('SELECT COUNT(*) FROM orders');
     res.json({ data: r.rows, total: parseInt(total.rows[0].count, 10), limit, offset });
   } catch (err) {

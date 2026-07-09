@@ -27,9 +27,12 @@ export default function OrdersPage(){
 
     const loadOrders = () => {
         const params = {};
-    if (filters.itemId) params.item = filters.itemId;
+        if (filters.itemId) params.item = filters.itemId;
         api.get('/orders', { params })
-            .then(res => setOrders(res.data))
+            .then(res => {
+                // Backend returns { data, total, limit, offset }
+                setOrders(res.data.data || []);
+            })
             .catch(() => setError('Tilauksien haku epäonnistui'));
     };
 
@@ -88,7 +91,8 @@ export default function OrdersPage(){
             order.customer_name,
             order.organization,
             order.delivery_point,
-            order.status
+            order.status,
+            order.event_name
         ].some((value) => String(value || '').toLowerCase().includes(filters.search.toLowerCase()));
 
         const matchesOrderer = !filters.orderer || String(order.customer_name || '')
@@ -102,39 +106,22 @@ export default function OrdersPage(){
         const matchesStatus = !filters.status || String(order.status || '') === filters.status;
 
         return matchesSearch && matchesOrderer && matchesDeliveryPoint && matchesStatus;
-    }).sort((left, right) => {
-        switch (sortBy) {
-            case 'alpha-asc':
-                return compareText(left.customer_name, right.customer_name);
-            case 'alpha-desc':
-                return compareText(right.customer_name, left.customer_name);
-            case 'delivery-point-asc':
-                return compareText(left.delivery_point, right.delivery_point) || compareText(left.customer_name, right.customer_name);
-            case 'edited-desc': {
-                const leftEdited = parseTimestamp(left.updated_at)?.getTime() || 0;
-                const rightEdited = parseTimestamp(right.updated_at)?.getTime() || 0;
-                return rightEdited - leftEdited || compareText(left.customer_name, right.customer_name);
-            }
-            case 'edited-asc': {
-                const leftEdited = parseTimestamp(left.updated_at)?.getTime() || 0;
-                const rightEdited = parseTimestamp(right.updated_at)?.getTime() || 0;
-                return leftEdited - rightEdited || compareText(left.customer_name, right.customer_name);
-            }
-            case 'placed-asc': {
-                const leftPlaced = parseTimestamp(left.created_at)?.getTime() || 0;
-                const rightPlaced = parseTimestamp(right.created_at)?.getTime() || 0;
-                return leftPlaced - rightPlaced || compareText(left.customer_name, right.customer_name);
-            }
-            case 'placed-desc':
-            default: {
-                const leftPlaced = parseTimestamp(left.created_at)?.getTime() || 0;
-                const rightPlaced = parseTimestamp(right.created_at)?.getTime() || 0;
-                return rightPlaced - leftPlaced || compareText(left.customer_name, right.customer_name);
-            }
-        }
     });
 
-    const availableStatuses = Array.from(new Set(orders.map((order) => order.status).filter(Boolean))).sort(compareText);
+    // Grouping logic
+    const ordersByEvent = filteredOrders.reduce((acc, order) => {
+        const eventName = order.event_name || 'Tuntematon tapahtuma';
+        if (!acc[eventName]) acc[eventName] = [];
+        acc[eventName].push(order);
+        return acc;
+    }, {});
+
+    // Sort events by the date of the first order in them (most recent first)
+    const sortedEventNames = Object.keys(ordersByEvent).sort((a, b) => {
+        const aLatest = Math.max(...ordersByEvent[a].map(o => new Date(o.created_at).getTime()));
+        const bLatest = Math.max(...ordersByEvent[b].map(o => new Date(o.created_at).getTime()));
+        return bLatest - aLatest;
+    });
 
     const openOrder = async (orderRow) => {
         setError('');
@@ -152,15 +139,6 @@ export default function OrdersPage(){
         } finally {
             setViewLoading(false);
         }
-    };
-
-    const startEditFromView = () => {
-        if (!viewingOrder?.order?.id) return;
-        setEditingOrder({
-            id: viewingOrder.order.id,
-            customerName: viewingOrder.order.customer_name
-        });
-        setViewingOrder(null);
     };
 
     const deleteOrder = async (orderId) => {
@@ -197,7 +175,7 @@ export default function OrdersPage(){
                         type="text"
                         value={filters.search}
                         onChange={(e) => updateFilter('search', e.target.value)}
-                        placeholder="ID, tilaaja, organisaatio..."
+                        placeholder="ID, tilaaja, tapahtuma..."
                     />
                 </label>
                 <label>
@@ -219,92 +197,62 @@ export default function OrdersPage(){
                     />
                 </label>
                 <label>
-                    Item (sku or name)
-                    <input
-                        type="text"
-                        value={filters.itemId}
-                        onChange={(e) => updateFilter('itemId', e.target.value)}
-                        placeholder="Suodata tuotteen sku:lla tai nimellä"
-                    />
-                </label>
-                <label>
                     Status
                     <select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
-                        <option value="">Kaikki</option>
+                        <option value="">Kaikki statukset</option>
                         {orderStatusOptions.map((status) => (
                             <option key={status} value={status}>{status}</option>
                         ))}
-                        {availableStatuses.filter((status) => !orderStatusOptions.includes(status)).map((status) => (
-                            <option key={status} value={status}>{status}</option>
-                        ))}
-                    </select>
-                </label>
-                <label>
-                    Järjestys
-                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                        <option value="placed-desc">Uusimmat tehdyt</option>
-                        <option value="placed-asc">Vanhimmat tehdyt</option>
-                        <option value="edited-desc">Viimeksi muokatut</option>
-                        <option value="edited-asc">Pisimpään muokkaamatta</option>
-                        <option value="alpha-asc">Tilaaja A-O</option>
-                        <option value="alpha-desc">Tilaaja O-A</option>
-                        <option value="delivery-point-asc">Toimituspiste A-O</option>
                     </select>
                 </label>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-                    <button onClick={() => { setError(''); loadOrders(); }}>Apply filters</button>
+                    <button onClick={() => { setError(''); loadOrders(); }}>Päivitä</button>
                 </div>
             </div>
 
-            <p className="orders-results-count">Näytetään {filteredOrders.length} / {orders.length} tilausta</p>
+            {sortedEventNames.map(eventName => (
+                <div key={eventName} className="event-group">
+                    <h3 className="event-title">{eventName}</h3>
+                    <table className="orders-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tilaaja</th>
+                                <th>Organisaatio</th>
+                                <th>Toimituspiste</th>
+                                <th>Status</th>
+                                <th>Aikaleima</th>
+                                <th>Toiminnot</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {ordersByEvent[eventName].map(o => {
+                                const timeMeta = getOrderTimestampMeta(o);
+                                return (
+                                    <tr key={o.id}>
+                                        <td>{o.id}</td>
+                                        <td>{o.customer_name}</td>
+                                        <td>{o.organization}</td>
+                                        <td>{o.delivery_point}</td>
+                                        <td><span className={`status-badge ${o.status}`}>{o.status}</span></td>
+                                        <td>{timeMeta.value}</td>
+                                        <td className="orders-actions">
+                                            <button onClick={() => openOrder(o)} disabled={viewLoading}>Avaa</button>
+                                            {isAdmin && (
+                                                <button className="danger-btn" onClick={() => deleteOrder(o.id)}>Poista</button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            ))}
 
-            <table className="orders-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tilaaja</th>
-                        <th>Organisaatio</th>
-                        <th>Toimituspiste</th>
-                        <th>Palautus</th>
-                        <th>Item qty</th>
-                        <th>Status</th>
-                        <th>Aikaleima</th>
-                        <th>Toiminnot</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {filteredOrders.map(o => {
-                        const timeMeta = getOrderTimestampMeta(o);
-                        return (
-                        <tr key={o.id}>
-                            <td>{o.id}</td>
-                            <td>{o.customer_name}</td>
-                            <td>{o.organization}</td>
-                            <td>{o.delivery_point}</td>
-                            <td>{o.return_at?.slice(0,10)}</td>
-                            <td>{o.item_quantity ?? '-'}</td>
-                            <td>{o.status}</td>
-                            <td>{timeMeta.label}: {timeMeta.value}</td>
-                            <td className="orders-actions">
-                                <button onClick={() => openOrder(o)} disabled={viewLoading}>
-                                    Avaa
-                                </button>
-                                {isAdmin && (
-                                    <button className="danger-btn" onClick={() => deleteOrder(o.id)}>
-                                        Poista
-                                    </button>
-                                )}
-                            </td>
-                        </tr>
-                    )})}
-                    {filteredOrders.length === 0 && (
-                        <tr>
-                            <td colSpan="8">Ei hakuehdoilla löytyviä tilauksia.</td>
-                        </tr>
-                    )}
-                </tbody>
-            </table>
+            {filteredOrders.length === 0 && (
+                <p className="no-results">Ei löytyviä tilauksia.</p>
+            )}
 
             {viewingOrder && (
                 <div className="order-view-backdrop" onClick={() => setViewingOrder(null)}>
@@ -312,83 +260,27 @@ export default function OrdersPage(){
                         <div className="order-view-topbar">
                             <h3>Tilaus #{viewingOrder.order.id}</h3>
                             <div className="order-view-actions">
-                                <a href={`/api/orders/${viewingOrder.order.id}/pdf`} target="_blank" rel="noopener noreferrer">
-                                    Lataa PDF
-                                </a>
-                                <button onClick={startEditFromView}>Muokkaa</button>
+                                <a href={`/api/orders/${viewingOrder.order.id}/pdf`} target="_blank" rel="noopener noreferrer">Lataa PDF</a>
                                 <button className="secondary-btn" onClick={() => setViewingOrder(null)}>Sulje</button>
                             </div>
                         </div>
-
                         <div className="order-view-meta">
+                            <div><strong>Tapahtuma:</strong> {viewingOrder.order.event_name || '-'}</div>
                             <div><strong>Tilaaja:</strong> {viewingOrder.order.customer_name || '-'}</div>
                             <div><strong>Organisaatio:</strong> {viewingOrder.order.organization || '-'}</div>
                             <div><strong>Toimituspiste:</strong> {viewingOrder.order.delivery_point || '-'}</div>
-                            <div><strong>Palautus:</strong> {viewingOrder.order.return_at?.slice(0, 10) || '-'}</div>
                             <div><strong>Status:</strong> {viewingOrder.order.status || '-'}</div>
-                            {(() => {
-                                const timeMeta = getOrderTimestampMeta(viewingOrder.order);
-                                return <div><strong>{timeMeta.label}:</strong> {timeMeta.value}</div>;
-                            })()}
                         </div>
-
-                        {viewingOrder.order.open_comment && (
-                            <div className="order-view-section">
-                                <h4>Avoin kommentti</h4>
-                                <p>{viewingOrder.order.open_comment}</p>
-                            </div>
-                        )}
-
-                        {viewRequirements && (
-                            <div className="order-view-section">
-                                <h4>Lisätiedot</h4>
-                                {viewRequirements.power && (
-                                    <p><strong>Sähkö:</strong> {viewRequirements.power}</p>
-                                )}
-                                {viewRequirements.network && (
-                                    <p><strong>Verkko:</strong> {viewRequirements.network}</p>
-                                )}
-                                {viewRequirements.lighting && (
-                                    <p><strong>Valaistus:</strong> {viewRequirements.lighting}</p>
-                                )}
-                                {viewRequirements.tv && (
-                                    <p><strong>TV:</strong> {viewRequirements.tv}</p>
-                                )}
-                            </div>
-                        )}
-
                         <div className="order-view-section">
                             <h4>Tuotteet</h4>
-                            <table className="orders-table order-view-items-table">
-                                <thead>
-                                    <tr>
-                                        <th>Tuote</th>
-                                        <th>SKU</th>
-                                        <th>Määrä</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {viewingOrder.items.map((it, idx) => (
-                                        <tr key={`${it.id || it.item_id || idx}-${idx}`}>
-                                            <td>{it.item_name || it.name || '-'}</td>
-                                            <td>{it.sku || '-'}</td>
-                                            <td>{it.quantity}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            <ul>
+                                {viewingOrder.items.map((item, idx) => (
+                                    <li key={idx}>{item.name} ({item.sku}) - {item.quantity} kpl</li>
+                                ))}
+                            </ul>
                         </div>
                     </div>
                 </div>
-            )}
-
-            {editingOrder && (
-                            <EditOrderModal
-                                orderId={editingOrder.id}
-                                customerName={editingOrder.customerName}
-                                onClose={() => setEditingOrder(null)}
-                                onSaved={() => { setEditingOrder(null); loadOrders(); }}
-                            />
             )}
         </div>
     );
