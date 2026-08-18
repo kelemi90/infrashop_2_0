@@ -24,12 +24,20 @@ function auth(req, res, next) {
 
 function requireRoles(allowedRoles, errorMessage = 'Forbidden') {
   return (req, res, next) => {
-    auth(req, res, () => {
-      if (!hasRole(req.user, allowedRoles)) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'No auth' });
+
+    const token = authHeader.split(' ')[1];
+    try {
+      const user = jwt.verify(token, JWT_SECRET);
+      if (!hasRole(user, allowedRoles)) {
         return res.status(403).json({ error: errorMessage });
       }
+      req.user = user;
       next();
-    });
+    } catch (error) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
   };
 }
 

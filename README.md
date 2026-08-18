@@ -218,6 +218,12 @@ Do not commit secrets to git. Keep real values only in local `.env`, deployment 
 
 `backend/scripts/create_admin.js` now requires `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
 
+### Slack Notifications
+
+To enable Slack notifications for new orders, set the `SLACK_WEBHOOK_URL` environment variable in your `.env` file:
+
+When a new order is placed, a formatted message will be sent to the configured Slack channel (e.g., "Infrashop tilaukset" under Vectorama Slack).
+
 Example (local shell):
 
 ```bash
